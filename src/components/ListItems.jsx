@@ -11,11 +11,17 @@ import { useStateContext } from "../contexts/ContextProvider";
 import { NavLink } from "react-router-dom";
 
 function ListItems({ items }) {
-  const { activeMenu, setActiveMenu, screenSize } = useStateContext();
+  const {
+    activeMenu,
+    setActiveMenu,
+    screenSize,
+    activeMain,
+    handleMainVisible,
+  } = useStateContext();
   const activeLink =
-    "flex items-center gap-5 pl-4 rounded-lg text-white bg-gray-400 text-md m-2";
+    "flex items-center gap-5 pl-4 rounded-lg text-white bg-gray-400 text-md m-2 cursor-pointer";
   const normalLink =
-    "flex items-center gap-5 pl-4 rounded-lg text-md text-gray-700 dark:text-gray-200 dark:hover:text-black hover:bg-light-gray m-2";
+    "flex items-center gap-5 pl-4 rounded-lg text-md text-gray-700 dark:text-gray-200 dark:hover:text-black hover:bg-light-gray m-2 cursor-pointer";
 
   return (
     <Grid container spacing={2}>
@@ -29,9 +35,9 @@ function ListItems({ items }) {
                 </Typography>
               </ListItem>
               {item.links.map((link) => (
-                <NavLink
+                <div
                   key={link.name}
-                  to={`/${link.name}`}
+                  onClick={() => handleMainVisible(`${link.name}`)}
                   className={({ activeMenu }) =>
                     activeMenu ? activeLink : normalLink
                   }
@@ -42,7 +48,7 @@ function ListItems({ items }) {
                     </ListItemAvatar>
                     <ListItemText primary={link.name} />
                   </ListItem>
-                </NavLink>
+                </div>
               ))}
             </div>
           ))}

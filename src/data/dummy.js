@@ -509,7 +509,7 @@ export const links = [
     title: "Dashboard",
     links: [
       {
-        name: "Profile",
+        name: "profile",
         icon: <AiOutlineUser />,
       },
     ],
@@ -545,7 +545,7 @@ export const links = [
     title: "Charts",
     links: [
       {
-        name: "line",
+        name: "lineChart",
         icon: <AiOutlineStock />,
       },
     ],

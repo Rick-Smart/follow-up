@@ -7,6 +7,15 @@ const initialState = {
   userProfile: false,
   notification: false,
 };
+
+const initialMain = {
+  profile: false,
+  employees: false,
+  priority: false,
+  editor: false,
+  calendar: false,
+  lineChart: false,
+};
 // refactor into 2 contexts 1: for auth and 2: for application state
 
 export const ContextProvider = ({ children }) => {
@@ -14,6 +23,7 @@ export const ContextProvider = ({ children }) => {
   const [isClicked, setIsClicked] = useState(initialState);
   const [screenSize, setScreenSize] = useState(undefined);
   const [user, setUser] = useState(null);
+  const [activeMain, setActiveMain] = useState(initialMain);
 
   const handleClick = (clicked) => {
     setIsClicked({ ...initialState, [clicked]: true });
@@ -21,6 +31,10 @@ export const ContextProvider = ({ children }) => {
 
   const setActiveUser = (userData) => {
     setUser(userData);
+  };
+
+  const handleMainVisible = (main) => {
+    setActiveMain({ ...initialMain, [main]: true });
   };
 
   return (
@@ -35,6 +49,9 @@ export const ContextProvider = ({ children }) => {
         setScreenSize,
         user,
         setActiveUser,
+        activeMain,
+        setActiveMain,
+        handleMainVisible,
       }}
     >
       {children}

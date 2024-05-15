@@ -5,14 +5,9 @@ import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { useStateContext } from "../contexts/ContextProvider";
 import { Navbar, Footer, Sidebar, ThemeSettings } from "../components";
 import { Calendar, Employees, Notes, Urgent, LineChart, Profile } from ".";
-// import { useStateContext } from "../contexts/ContextProvider";
 
 function Dashboard() {
-  const { activeMenu } = useStateContext();
-
-  //   this needs to be removed once testing is complete and set back to stateContext
-  // const activeMenu = false;
-  //   this needs to be removed once testing is complete and set back to stateContext
+  const { activeMenu, activeMain } = useStateContext();
 
   return (
     <div>
@@ -45,16 +40,26 @@ function Dashboard() {
           <div className="fixed md:static bg-main-bg dark:bg-main-bg navbar w-full">
             <Navbar />
           </div>
-          <div>
-            {/* dynamically program this to display when sidebar menu selects one of the following options
-                <Profile />
-                <Employees />
-                <Urgent />
-                <Notes />
-                <Calendar />
-                <LineChart />
-                */}
-          </div>
+          <main>
+            <div className={!activeMain.profile && "hidden"}>
+              <Profile />
+            </div>
+            <div className={!activeMain.employees && "hidden"}>
+              <Employees />
+            </div>
+            <div className={!activeMain.priority && "hidden"}>
+              <Urgent />
+            </div>
+            <div className={!activeMain.editor && "hidden"}>
+              <Notes />
+            </div>
+            <div className={!activeMain.calendar && "hidden"}>
+              <Calendar />
+            </div>
+            <div className={!activeMain.lineChart && "hidden"}>
+              <LineChart />
+            </div>
+          </main>
           <Footer />
         </div>
       </div>

@@ -1,8 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { SiShopware } from "react-icons/si";
-import { MdOutlineCancel } from "react-icons/md";
-import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import ListItems from "./ListItems";
 
 // Dummy Data for testing
