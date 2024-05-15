@@ -32,7 +32,6 @@ function ListItems({ items }) {
                 <NavLink
                   key={link.name}
                   to={`/${link.name}`}
-                  onClick={() => {}}
                   className={({ activeMenu }) =>
                     activeMenu ? activeLink : normalLink
                   }
