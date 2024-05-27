@@ -2,14 +2,17 @@ import React from "react";
 import { FiSettings } from "react-icons/fi";
 import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { useStateContext } from "../contexts/ContextProvider";
+import { Navigate } from "react-router-dom";
 import { Navbar, Footer, Sidebar, ThemeSettings } from "../components";
 import { Calendar, Employees, Notes, Urgent, LineChart, Profile } from ".";
+import { auth } from "../firebase";
 
 function Dashboard() {
   const { activeMenu, activeMain } = useStateContext();
 
   return (
     <div>
+      {!auth.currentUser && <Navigate to={"/"} replace={true} />}
       <div className="flex relative dark:bg-main-dark-bg">
         <div className="fixed right-4 bottom-4" style={{ zIndex: "1000" }}>
           <TooltipComponent content="Settings" position="Top">

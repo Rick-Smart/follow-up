@@ -1,20 +1,11 @@
 import {
   getAuth,
-  setPersistence,
-  browserSessionPersistence,
+  onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { initializeApp } from "firebase/app";
-import {
-  getFirestore,
-  collection,
-  query,
-  orderBy,
-  limit,
-  addDoc,
-  serverTimestamp,
-} from "@firebase/firestore";
+import { getFirestore } from "@firebase/firestore";
 
 const app = initializeApp({
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -26,19 +17,13 @@ const app = initializeApp({
 });
 
 const fireStore = getFirestore(app);
+
 const auth = getAuth(app);
-// setPersistence(auth, browserSessionPersistence)
-//   .then(() => {
-//     return signInWithEmailAndPassword(auth, email, password);
-//   })
-//   .catch((error) => {
-//     const errorCode = error.code;
-//     const errorMessage = error.message;
-//   });
 
 export {
   auth,
   fireStore,
+  onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 };

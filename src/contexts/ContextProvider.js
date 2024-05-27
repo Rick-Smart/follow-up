@@ -24,6 +24,7 @@ export const ContextProvider = ({ children }) => {
   const [screenSize, setScreenSize] = useState(undefined);
   const [user, setUser] = useState(null);
   const [activeMain, setActiveMain] = useState(initialMain);
+  const [currentUser, setCurrentUser] = useState(false);
 
   const handleClick = (clicked) => {
     setIsClicked({ ...initialState, [clicked]: true });
@@ -31,6 +32,7 @@ export const ContextProvider = ({ children }) => {
 
   const setActiveUser = (userData) => {
     setUser(userData);
+    setCurrentUser(true);
   };
 
   const handleMainVisible = (main) => {
@@ -52,6 +54,7 @@ export const ContextProvider = ({ children }) => {
         activeMain,
         setActiveMain,
         handleMainVisible,
+        currentUser,
       }}
     >
       {children}

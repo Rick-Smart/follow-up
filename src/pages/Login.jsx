@@ -1,8 +1,12 @@
-import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { NavLink, Navigate } from "react-router-dom";
 
 // auth and signin from firebase
-import { auth, signInWithEmailAndPassword } from "../firebase";
+import {
+  auth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+} from "../firebase";
 // context to set user
 import { useStateContext } from "../contexts/ContextProvider";
 
@@ -11,16 +15,25 @@ import { setCurrentUser } from "../utils/controller";
 function Login() {
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
-  const { setActiveUser } = useStateContext();
-  const navigate = useNavigate();
+  const { setActiveUser, currentUser } = useStateContext();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setActiveUser(currentUser);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const handleLogin = (e) => {
     e.preventDefault();
+
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
-        navigate("/dashboard");
-        setCurrentUser(user);
+        const tempUser = auth.currentUser;
+        console.log(auth.currentUser);
         setActiveUser(user);
       })
       .catch((error) => {
@@ -32,6 +45,7 @@ function Login() {
 
   return (
     <div className="bg-gray-100 h-screen w-screen flex items-center justify-center">
+      {auth.currentUser && <Navigate to={"/dashboard"} replace={true} />}
       <div className="bg-white rounded flex space-between shadow-md max-w-4xl">
         <section className="py-8 px-12">
           <img

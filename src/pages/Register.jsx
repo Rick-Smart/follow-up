@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, Navigate } from "react-router-dom";
 // auth and registration from firebase
 import { auth, createUserWithEmailAndPassword } from "../firebase";
 // context for setting user
@@ -10,7 +10,7 @@ import { createNewUserCollection } from "../utils/controller";
 function Register() {
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
-  const { setActiveUser } = useStateContext();
+  const { setActiveUser, currentUser } = useStateContext();
   const navigate = useNavigate();
 
   const handleSignUp = (e) => {
@@ -31,6 +31,7 @@ function Register() {
 
   return (
     <div className="bg-gray-100 h-screen w-screen flex items-center justify-center">
+      {currentUser && <Navigate to={"/dashboard"} replace={true} />}
       <div className="bg-white rounded flex space-between shadow-md max-w-4xl">
         <section className="py-8 px-12">
           <img
