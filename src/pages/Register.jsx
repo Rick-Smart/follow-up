@@ -31,7 +31,7 @@ function Register() {
 
   return (
     <div className="bg-gray-100 h-screen w-screen flex items-center justify-center">
-      {currentUser && <Navigate to={"/dashboard"} replace={true} />}
+      {auth.currentUser && <Navigate to={"/dashboard"} replace={true} />}
       <div className="bg-white rounded flex space-between shadow-md max-w-4xl">
         <section className="py-8 px-12">
           <img

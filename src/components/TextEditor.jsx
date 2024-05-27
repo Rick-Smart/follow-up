@@ -9,7 +9,7 @@ import StarterKit from "@tiptap/starter-kit";
 
 const extensions = [StarterKit];
 
-const content = "<p>Hello World!</p>";
+const content = "<p>Welcome to the world of Notes!</p>";
 
 function TextEditor() {
   const editor = useEditor({
@@ -19,8 +19,8 @@ function TextEditor() {
   return (
     <div>
       <EditorContent editor={editor} />
+      <BubbleMenu editor={editor}></BubbleMenu>
       <FloatingMenu editor={editor}></FloatingMenu>
-      <BubbleMenu editor={editor}>This is the bubble menu</BubbleMenu>
     </div>
   );
 }

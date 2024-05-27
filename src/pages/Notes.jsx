@@ -1,7 +1,9 @@
 import React from "react";
 
+// this will be replaced with a form that can be used to track progress of field completion
 import TextEditor from "../components/TextEditor";
 
+// these will most likely need to be moved to the text editor component
 import { setNote, getNotes, getNotifications } from "../utils/controller";
 
 import { Header } from "../components";
