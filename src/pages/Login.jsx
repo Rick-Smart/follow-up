@@ -10,13 +10,12 @@ import {
 // context to set user
 import { useStateContext } from "../contexts/ContextProvider";
 
-import { setCurrentUser } from "../utils/controller";
-
 function Login() {
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
   const { setActiveUser, currentUser } = useStateContext();
 
+  // needed to allow persistence with page refresh --- will need to also set this up with a loading screen for better UX
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setActiveUser(currentUser);
@@ -24,7 +23,7 @@ function Login() {
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [setActiveUser]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -32,8 +31,6 @@ function Login() {
     signInWithEmailAndPassword(auth, email, password)
       .then((userCredential) => {
         const user = userCredential.user;
-        const tempUser = auth.currentUser;
-        console.log(auth.currentUser);
         setActiveUser(user);
       })
       .catch((error) => {

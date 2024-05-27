@@ -6,8 +6,6 @@ import {
   setDoc,
   addDoc,
   updateDoc,
-  arrayUnion,
-  arrayRemove,
 } from "firebase/firestore";
 import { fireStore } from "../firebase";
 

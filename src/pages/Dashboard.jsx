@@ -1,14 +1,23 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { FiSettings } from "react-icons/fi";
 import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { useStateContext } from "../contexts/ContextProvider";
 import { Navigate } from "react-router-dom";
 import { Navbar, Footer, Sidebar, ThemeSettings } from "../components";
 import { Calendar, Employees, Notes, Urgent, LineChart, Profile } from ".";
-import { auth } from "../firebase";
+import { auth, onAuthStateChanged } from "../firebase";
 
 function Dashboard() {
-  const { activeMenu, activeMain } = useStateContext();
+  const { activeMenu, activeMain, setActiveUser } = useStateContext();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setActiveUser(currentUser);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   return (
     <div>
