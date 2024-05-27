@@ -51,6 +51,7 @@ function Register() {
               placeholder="Email"
               onChange={(text) => setEmail(text.target.value)}
             />
+            {/* additional password input field required to check and make sure the user has entered the correct password */}
             <input
               type="password"
               className="border border-gray-200 rounded bg-gray-100 p-2 my-2 w-full"
