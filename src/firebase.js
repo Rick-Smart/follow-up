@@ -1,5 +1,7 @@
 import {
   getAuth,
+  setPersistence,
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
@@ -25,6 +27,14 @@ const app = initializeApp({
 
 const fireStore = getFirestore(app);
 const auth = getAuth(app);
+// setPersistence(auth, browserSessionPersistence)
+//   .then(() => {
+//     return signInWithEmailAndPassword(auth, email, password);
+//   })
+//   .catch((error) => {
+//     const errorCode = error.code;
+//     const errorMessage = error.message;
+//   });
 
 export {
   auth,

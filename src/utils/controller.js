@@ -13,7 +13,8 @@ import { fireStore } from "../firebase";
 
 let currentUser;
 
-let model = ["notes", "notifications", "employees", "priority", "calendar"];
+// this is the current number of collections to add to each user
+const model = ["notes", "notifications", "employees", "priority", "calendar"];
 
 // function for initializing current user on login / register
 function setCurrentUser(user) {
@@ -30,6 +31,13 @@ const getSingleUserDoc = () => {
   return doc(fireStore, "users", currentUser);
 };
 
+// this is the loop we are running to create every collection they user needs
+const createUserModel = async (item) => {
+  await addDoc(collection(getSingleUserDoc(), `${item}`), {
+    title: `My ${item}`,
+    body: `Welcome to your ${item}!`,
+  });
+};
 // this function needs to only run the very first time the user registers
 // if it is ran again it will cause a DB error because the collections can't have the same uid
 // from here we can create all of the default data and collections we would like to add to each new user
@@ -46,9 +54,8 @@ const createNewUserCollection = async (user) => {
     )
       .then(setCurrentUser(user))
       .then(
-        await addDoc(collection(getSingleUserDoc(), "notes"), {
-          title: "My Notes",
-          body: "Welcome to your notes!",
+        model.forEach((item) => {
+          createUserModel(item);
         })
       );
   } catch (error) {
@@ -58,14 +65,14 @@ const createNewUserCollection = async (user) => {
 
 // writing notes to our single user
 const setNote = async () => {
-  try {
-    await setDoc(getSingleUserDoc(), "notes", {
-      title: "title 3",
-      body: "stuff and things 3",
-    });
-  } catch (error) {
-    alert(error);
-  }
+  await addDoc(
+    collection(getSingleUserDoc(), "notes"),
+    {
+      title: "title 2",
+      body: "stuff and things 2",
+    },
+    { merge: true }
+  );
 };
 
 // getting all notes from our single user
@@ -80,7 +87,9 @@ const getNotifications = async () => {
   const querySnapshot = await getDocs(
     collection(getSingleUserDoc(), "notifications")
   );
-  console.log(querySnapshot.data());
+  querySnapshot.forEach((notification) => {
+    console.log(notification.id, " => ", notification.data());
+  });
 };
 
 export {
