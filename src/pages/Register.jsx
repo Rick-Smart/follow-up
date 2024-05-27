@@ -5,6 +5,8 @@ import { auth, createUserWithEmailAndPassword } from "../firebase";
 // context for setting user
 import { useStateContext } from "../contexts/ContextProvider";
 
+import { createNewUserCollection } from "../utils/controller";
+
 function Register() {
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
@@ -17,6 +19,7 @@ function Register() {
       .then((userCredential) => {
         const user = userCredential.user;
         setActiveUser(user);
+        createNewUserCollection(user);
         navigate("/dashboard");
       })
       .catch((error) => {

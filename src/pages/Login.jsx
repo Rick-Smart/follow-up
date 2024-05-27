@@ -6,6 +6,8 @@ import { auth, signInWithEmailAndPassword } from "../firebase";
 // context to set user
 import { useStateContext } from "../contexts/ContextProvider";
 
+import { setCurrentUser } from "../utils/controller";
+
 function Login() {
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
@@ -18,6 +20,7 @@ function Login() {
       .then((userCredential) => {
         const user = userCredential.user;
         navigate("/dashboard");
+        setCurrentUser(user);
         setActiveUser(user);
       })
       .catch((error) => {
