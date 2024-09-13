@@ -1,0 +1,63 @@
+body {
+    background-color: #fbfbfb;
+}
+
+#infoSection {
+    padding-block: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    display: flex;
+}
+
+#acctInfo {
+    flex-grow: 1;
+}
+
+#resolutionPath {
+    background-color: #4D4A4A;
+    width: 170px;
+    border-radius: 10px;
+    border: 2px solid #808080;
+    box-shadow: 0 4px 8px #636363;
+}
+
+#resolutionButtons {
+    padding: 16px 10px 0px 10px;
+    display: flex;
+    flex-direction: column;
+    align-content: space-between;
+}
+
+#advProbingHead {
+    text-align: center;
+}
+
+
+#addtlQuestions {
+    background-color: #dadada;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 10px;
+    border: 2px solid #808080;
+    box-shadow: 0 4px 8px 0 #636363;
+}
+
+hr {
+    border-color: #FF00FF;
+    box-shadow: 0 1px 2px 0 #ff3399;
+}
+
+button {
+    color: #ffffff;
+    background-color: #d147ca;
+    border: 1px solid #262327;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+button:hover {
+    color: #ffffff;
+    background-color: #832b7e;
+    border: 1px solid #262327;
+    border-radius: 3px;
+}

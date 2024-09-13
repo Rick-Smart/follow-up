@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    </script>
+    <title>Call Checklist And Notes</title>
+</head>
+
+<body>          <!--Add progress bar for top/bottom of screen, to update when filling in information and completing path to resolution-->
+
+<title>Call Checklist</title>
+
+<h2>Customer Information</h2>
+    <div id="infoSection">
+            <div id="acctInfo">                     <!--Customer Information fields-->
+                <form>
+                    <label for="cxName">Customer Name:</label><br>
+                        <input type="text" id="cxName" name="cxName" size="12"><br>
+                    <br>
+                    <label for="cxPhone">Best Callback Number:</label><br>
+                        <input type="text" id="cxPhone" name="cxPhone" 
+                        placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" size="8" maxlength="12"><br>
+                    <br>
+                    <label for="cxAccount">BAN:</label><br>
+                        <input type="text" id="cxAccount" name="cxAccount" size="8" maxlength="9"><br>
+                    <br>
+                    <label for="imei">IMEI:</label><br>
+                        <input type="text" id="imei" name="imei" size="12" maxlength="15"><br>
+                    <br> 
+                    <label for="lineNumber">*Optional* Line Number:</label><br>
+                        <input type="text" id="lineNumber" name="lineNumber"
+                        placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" size="8" maxlength="12"><br>
+                </form>
+            </div>
+            <div id="resolutionPath">               <!--Sidebar content for Path to Resolution buttons-->
+                <!--Change color on click-->
+                <form id="resolutionButtons">
+                    <button type="button" id="greeting">Greeting Provided</button><br>
+                        <script>
+                            document.getElementById("greeting").addEventListener('click', () => {
+                            greeting.style.backgroundColor = '#5cd65c';
+                            });
+                        </script>
+                    <button type="button" id="signatureResponse">Signature Response</button><br>
+                        <script>
+                            document.getElementById("signatureResponse").addEventListener('click', () => {
+                            signatureResponse.style.backgroundColor = '#5cd65c';
+                            });
+                        </script>
+                    <button type="button" id="probingQuestion">Probing Questions</button><br>
+                        <script>
+                            document.getElementById("probingQuestion").addEventListener('click', () => {
+                            probingQuestion.style.backgroundColor = '#5cd65c';
+                            });
+                        </script>
+                    <button type="button" id="theFix">The FIX</button><br>
+                        <script>
+                            document.getElementById("theFix").addEventListener('click', () => {
+                            theFix.style.backgroundColor = '#5cd65c';
+                            });
+                        </script>
+                    <button type="button" id="selfHelp">Self-Help</button><br>
+                        <script>
+                            document.getElementById("selfHelp").addEventListener('click', () => {
+                            selfHelp.style.backgroundColor = '#5cd65c';
+                            });
+                        </script>
+                    <button type="button" id="deepenRelations">Deepen Relationships</button><br>
+                        <script>
+                            document.getElementById("deepenRelations").addEventListener('click', () => {
+                            deepenRelations.style.backgroundColor = '#5cd65c';
+                            });
+                        </script>
+                    <button type="button" id="recapClose">Recap and Close</button><br>
+                        <script>
+                            document.getElementById("recapClose").addEventListener('click', () => {
+                            recapClose.style.backgroundColor = '#5cd65c';
+                            });
+                        </script>
+                </form>
+                
+            </div>
+    </div>
+
+<hr>
+
+<h3>Notes and Probing Questions</h3>
+    <div id="notesSection">
+        <div id="notes">                        <!--Text box for Call Notes-->
+            <form>
+                <label for="callNotes">Call Notes:</label><br>      
+                    <textarea id="callNotes" name="callNotes" rows="10" cols="240"></textarea><br>
+                <br>
+            </form>
+        </div>
+        <div id="basicProbingQuestions">             <!--Fields for probing questions, want to add collapsibles for additional questions-->
+            <form>
+                <label for="issueLocation">Where is the issue occurring (address of device)?</label><br>
+                    <input type="text" id="issueLocation" name="issueLocation" size="30"><br>
+                <label for="issueStart">When did the issue begin?</label><br>
+                    <input type="text" id="issueStart" name="issueStart" size="30"><br>
+            </form>
+        </div>
+<hr>
+<h3 id="advProbingHead">Probing Questions</h3>
+    <div id="addtlQuestions">
+        <h4>Situation</h4>                  
+            <ul>                            <!-- Want to be Collapsible List-->
+                <li>What shows on the device screen when you have the problem?</li>
+                <li>Do you get any error messages?</li>
+                <li>What were you doing with the device when this started happening?</li>
+                <li>Which device is having the issue? Are other devices also having the issue?</li>
+                <li>For Dual SIM with eSIM devices, which line is having the problem?</li>
+            </ul>
+        <h4>Duration</h4>
+            <ul>                            <!-- Want to be Collapsible List-->
+                <li>When did you first notice the issue?</li>
+                <li>Has anything changed recently?</li>
+                <li>How often does it happen?</li>
+                <li>Can you repeat the same steps and always have the same problem, or is it sporadic?</li>
+            </ul>
+        <h4>Location</h4>
+            <ul>                            <!-- Want to be Collapsible List-->
+                <li>Do you see the issue occuring at a specific place?
+                <li>How many bars of signal do you have? Do the signal bars fluctuate?</li>
+                <li>Do you see 3G/4G/LTE/5G on your screen?</li>
+                <li>Are you inside or outside?</li>
+            </ul>
+    </div>
+
+</div>
+
+</body>
+</html>
