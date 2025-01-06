@@ -4,7 +4,7 @@ import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { useStateContext } from "../contexts/ContextProvider";
 import { Navigate } from "react-router-dom";
 import { Navbar, Footer, Sidebar, ThemeSettings } from "../components";
-import { Calendar, Employees, Notes, Urgent, LineChart, Profile } from ".";
+import { Calendar, Employees, Notes, Urgent, LineChart, Profile, Tickets } from ".";
 import { auth, onAuthStateChanged } from "../firebase";
 
 function Dashboard() {
@@ -27,7 +27,7 @@ function Dashboard() {
           <TooltipComponent content="Settings" position="Top">
             <button
               type="button"
-              className="text-3xl p-3 hover:drop-shadow-xl hover: bg-light-grey text-white"
+              className="text-3xl p-3 hover:drop-shadow-xl hover:bg-light-grey text-white"
               style={{ background: "blue", borderRadius: "50%" }}
             >
               <FiSettings />
@@ -52,23 +52,26 @@ function Dashboard() {
             <Navbar />
           </div>
           <main>
-            <div className={!activeMain.profile && "hidden"}>
+            <div className={!activeMain.Profile && "hidden"}>
               <Profile />
             </div>
-            <div className={!activeMain.employees && "hidden"}>
+            <div className={!activeMain.Employees && "hidden"}>
               <Employees />
             </div>
-            <div className={!activeMain.priority && "hidden"}>
+            <div className={!activeMain.Priority && "hidden"}>
               <Urgent />
             </div>
-            <div className={!activeMain.editor && "hidden"}>
+            <div className={!activeMain.Editor && "hidden"}>
               <Notes />
             </div>
-            <div className={!activeMain.calendar && "hidden"}>
+            <div className={!activeMain.Calendar && "hidden"}>
               <Calendar />
             </div>
-            <div className={!activeMain.lineChart && "hidden"}>
+            <div className={!activeMain.LineChart && "hidden"}>
               <LineChart />
+            </div>
+            <div className={!activeMain.Tickets && "hidden"}>
+              <Tickets />
             </div>
           </main>
           <Footer />

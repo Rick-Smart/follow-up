@@ -1,3 +1,112 @@
+// import {
+//   collection,
+//   doc,
+//   getDoc,
+//   getDocs,
+//   setDoc,
+//   addDoc,
+//   updateDoc,
+// } from "firebase/firestore";
+// import { fireStore } from "../firebase";
+
+// let currentUser;
+
+// // this is the current number of collections to add to each user
+// const model = ["notes", "notifications", "employees", "priority", "calendar"];
+
+// // function for initializing current user on login / register
+// function setCurrentUser(user) {
+//   currentUser = user.uid;
+// }
+
+// // gets reference to complete list of all users
+// const getUsersCollection = () => {
+//   return collection(fireStore, "users");
+// };
+
+// // gets reference to only the active user
+// const getSingleUserDoc = () => {
+
+//   if (!currentUser) {
+//     console.error('No user is currently logged in');
+//     return null;
+//   }
+
+//   return doc(fireStore, "users", currentUser);
+// };
+
+// // this is the loop we are running to create every collection the user needs
+// const createUserModel = async (item) => {
+//   await addDoc(collection(getSingleUserDoc(), `${item}`), {
+//     title: `My ${item}`,
+//     body: `Welcome to your ${item}!`,
+//   });
+// };
+// // this function needs to only run the very first time the user registers
+// // if it is ran again it will cause a DB error because the collections can't have the same uid
+// // from here we can create all of the default data and collections we would like to add to each new user
+// const createNewUserCollection = async (user) => {
+//   try {
+//     await setDoc(
+//       doc(getUsersCollection(), user.uid),
+//       {
+//         name: "",
+//         email: user.email,
+//         role: "admin",
+//       },
+//       { merge: true }
+//     )
+//       .then(setCurrentUser(user))
+//       .then(
+//         model.forEach((item) => {
+//           createUserModel(item);
+//         })
+//       );
+//   } catch (error) {
+//     alert(error);
+//   }
+// };
+
+// // writing notes to our single user
+// const setNote = async () => {
+//   await addDoc(
+//     collection(getSingleUserDoc(), "notes"),
+//     {
+//       title: "title 3",
+//       body: "stuff and things 3",
+//     },
+//     { merge: true }
+//   );
+// };
+
+// // getting all notes from our single user
+// const getNotes = async () => {
+//   const querySnapshot = await getDocs(collection(getSingleUserDoc(), "notes"));
+//   querySnapshot.forEach((note) => {
+//     console.log(note.id, " => ", note.data());
+//   });
+// };
+
+// const getNotifications = async () => {
+//   const querySnapshot = await getDocs(
+//     collection(getSingleUserDoc(), "notifications")
+//   );
+//   querySnapshot.forEach((notification) => {
+//     console.log(notification.id, " => ", notification.data());
+//   });
+// };
+
+// export {
+//   createNewUserCollection,
+//   setCurrentUser,
+//   setNote,
+//   getNotes,
+//   getNotifications,
+// };
+
+
+// -----------------------------------------------------------------------------------
+
 import {
   collection,
   doc,
@@ -9,14 +118,21 @@ import {
 } from "firebase/firestore";
 import { fireStore } from "../firebase";
 
-let currentUser;
+// User management functions using localStorage
+const getCurrentUser = () => {
+  return localStorage.getItem('currentUser');
+};
+
+const setCurrentUserStorage = (uid) => {
+  localStorage.setItem('currentUser', uid);
+};
 
 // this is the current number of collections to add to each user
 const model = ["notes", "notifications", "employees", "priority", "calendar"];
 
 // function for initializing current user on login / register
 function setCurrentUser(user) {
-  currentUser = user.uid;
+  setCurrentUserStorage(user.uid);
 }
 
 // gets reference to complete list of all users
@@ -26,16 +142,34 @@ const getUsersCollection = () => {
 
 // gets reference to only the active user
 const getSingleUserDoc = () => {
+  const currentUser = getCurrentUser();
+  
+  if (!currentUser) {
+    console.error('No user is currently logged in');
+    return null;
+  }
+
   return doc(fireStore, "users", currentUser);
 };
 
-// this is the loop we are running to create every collection they user needs
+// this is the loop we are running to create every collection the user needs
 const createUserModel = async (item) => {
-  await addDoc(collection(getSingleUserDoc(), `${item}`), {
-    title: `My ${item}`,
-    body: `Welcome to your ${item}!`,
-  });
+  try {
+    const userDocRef = getSingleUserDoc();
+    if (!userDocRef) {
+      console.error('No user document reference available');
+      return;
+    }
+
+    await addDoc(collection(userDocRef, `${item}`), {
+      title: `My ${item}`,
+      body: `Welcome to your ${item}!`,
+    });
+  } catch (error) {
+    console.error(`Error creating ${item}:`, error);
+  }
 };
+
 // this function needs to only run the very first time the user registers
 // if it is ran again it will cause a DB error because the collections can't have the same uid
 // from here we can create all of the default data and collections we would like to add to each new user
@@ -50,44 +184,80 @@ const createNewUserCollection = async (user) => {
       },
       { merge: true }
     )
-      .then(setCurrentUser(user))
-      .then(
+      .then(() => setCurrentUser(user))
+      .then(() => {
         model.forEach((item) => {
           createUserModel(item);
-        })
-      );
+        });
+      });
   } catch (error) {
-    alert(error);
+    console.error("Error creating user collection:", error);
   }
 };
 
 // writing notes to our single user
 const setNote = async () => {
-  await addDoc(
-    collection(getSingleUserDoc(), "notes"),
-    {
-      title: "title 2",
-      body: "stuff and things 2",
-    },
-    { merge: true }
-  );
+  try {
+    const userDocRef = getSingleUserDoc();
+    if (!userDocRef) {
+      console.error('No user document reference available');
+      return;
+    }
+
+    await addDoc(
+      collection(userDocRef, "notes"),
+      {
+        title: "title 2",
+        body: "stuff and things 2",
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("Error setting note:", error);
+  }
 };
 
 // getting all notes from our single user
 const getNotes = async () => {
-  const querySnapshot = await getDocs(collection(getSingleUserDoc(), "notes"));
-  querySnapshot.forEach((note) => {
-    console.log(note.id, " => ", note.data());
-  });
+  try {
+    const userDocRef = getSingleUserDoc();
+    if (!userDocRef) {
+      console.error('No user document reference available');
+      return [];
+    }
+
+    const notesCollection = collection(userDocRef, "notes");
+    const querySnapshot = await getDocs(notesCollection);
+    const notes = [];
+    querySnapshot.forEach((note) => {
+      notes.push({ id: note.id, ...note.data() });
+    });
+    return notes;
+  } catch (error) {
+    console.error("Error fetching notes:", error);
+    return [];
+  }
 };
 
 const getNotifications = async () => {
-  const querySnapshot = await getDocs(
-    collection(getSingleUserDoc(), "notifications")
-  );
-  querySnapshot.forEach((notification) => {
-    console.log(notification.id, " => ", notification.data());
-  });
+  try {
+    const userDocRef = getSingleUserDoc();
+    if (!userDocRef) {
+      console.error('No user document reference available');
+      return [];
+    }
+
+    const notificationsCollection = collection(userDocRef, "notifications");
+    const querySnapshot = await getDocs(notificationsCollection);
+    const notifications = [];
+    querySnapshot.forEach((notification) => {
+      notifications.push({ id: notification.id, ...notification.data() });
+    });
+    return notifications;
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return [];
+  }
 };
 
 export {

@@ -1,4 +1,5 @@
 import React from "react";
+import { RiCustomerServiceLine } from 'react-icons/ri';
 import {
   AiOutlineCalendar,
   AiOutlineStock,
@@ -509,7 +510,7 @@ export const links = [
     title: "Dashboard",
     links: [
       {
-        name: "profile",
+        name: "Profile",
         icon: <AiOutlineUser />,
       },
     ],
@@ -519,12 +520,16 @@ export const links = [
     title: "Pages",
     links: [
       {
-        name: "employees",
+        name: "Employees",
         icon: <IoMdContacts />,
       },
       {
-        name: "priority",
+        name: "Priority",
         icon: <AiOutlineExclamation />,
+      },
+      {
+        name: "Tickets",
+        icon: <RiCustomerServiceLine />
       },
     ],
   },
@@ -532,11 +537,11 @@ export const links = [
     title: "Apps",
     links: [
       {
-        name: "editor",
+        name: "Editor",
         icon: <FiEdit />,
       },
       {
-        name: "calendar",
+        name: "Calendar",
         icon: <AiOutlineCalendar />,
       },
     ],
@@ -545,7 +550,7 @@ export const links = [
     title: "Charts",
     links: [
       {
-        name: "lineChart",
+        name: "LineChart",
         icon: <AiOutlineStock />,
       },
     ],

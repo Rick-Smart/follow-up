@@ -38,8 +38,8 @@ function ListItems({ items }) {
                 <div
                   key={link.name}
                   onClick={() => handleMainVisible(`${link.name}`)}
-                  className={({ activeMenu }) =>
-                    activeMenu ? activeLink : normalLink
+                  className={
+                    activeMenu ?  normalLink : activeLink
                   }
                 >
                   <ListItem>
