@@ -62,10 +62,10 @@ function TextEditor({ onSave, initialContent, initialTitle, isEditing }) {
         </div>
         
         {/* Editor Container */}
-        <div className="min-h-590 bg-light-gray dark:bg-main-dark-bg rounded-lg border-1 border-color">
+        <div className="min-h-300 bg-light-gray dark:bg-main-dark-bg rounded-lg border-1 border-color">
           <EditorContent 
             editor={editor} 
-            className="p-4 min-h-590 prose max-w-none dark:text-gray-200"
+            className="p-4 min-h-300 prose max-w-none dark:text-gray-200"
           />
         </div>
 

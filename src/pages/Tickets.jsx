@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "../components";
-import { createTicket, getTickets, escalateTicket, addNoteToTicket, closeTicket } from "../utils/ticketsController";
+import {
+  createTicket,
+  getTickets,
+  escalateTicket,
+  addNoteToTicket,
+  closeTicket,
+} from "../utils/ticketsController";
+import Joi from "joi";
+import DOMPurify from "dompurify";
 
 // Helper function to calculate remaining time
 const getTimeRemaining = (dueDate) => {
@@ -18,10 +26,19 @@ const getEscalationColor = (level) => {
     2: "bg-blue-100 border-blue-500",
     3: "bg-yellow-100 border-yellow-500",
     4: "bg-orange-100 border-orange-500",
-    5: "bg-red-100 border-red-500"
+    5: "bg-red-100 border-red-500",
   };
   return colors[level] || colors[1];
 };
+
+// Validation schema for tickets
+const ticketSchema = Joi.object({
+  complaint: Joi.number().required().min(10).label("INC Number"),
+  incNumber: Joi.number().required().min(10).label("INC Number"),
+  msisdn: Joi.number().required().min(10).label("MSISDN"),
+  submittedBy: Joi.string().required().label("Submitted By"),
+  description: Joi.string().required().label("Description"),
+});
 
 const Tickets = () => {
   const [tickets, setTickets] = useState([]);
@@ -36,11 +53,11 @@ const Tickets = () => {
   const [escalationNote, setEscalationNote] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [newTicket, setNewTicket] = useState({
-    Complaint : "",
-    INCNumber : "",
-    MSISDN: "",
-    Submitted: "",
-    Description: ""
+    complaint: "",
+    incNumber: "",
+    msisdn: "",
+    submittedBy: "",
+    description: "",
   });
 
   const fetchTickets = async () => {
@@ -51,7 +68,7 @@ const Tickets = () => {
       setTickets(fetchedTickets);
       setFilteredTickets(fetchedTickets);
     } catch (err) {
-      setError("Failed to load tickets");
+      setError("Failed to load tickets.");
     } finally {
       setIsLoading(false);
     }
@@ -59,8 +76,8 @@ const Tickets = () => {
 
   useEffect(() => {
     fetchTickets();
-    const timer = setInterval(fetchTickets, 60000); // Refresh every minute
-    return () => clearInterval(timer);
+    // const timer = setInterval(fetchTickets, 60000); // Refresh every minute
+    // return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -69,33 +86,49 @@ const Tickets = () => {
         setFilteredTickets(tickets);
         return;
       }
-
-      const filtered = tickets.filter(ticket => {
-        const searchValue = String(ticket[searchField] || '').toLowerCase();
+      const filtered = tickets.filter((ticket) => {
+        const searchValue = String(ticket[searchField] || "").toLowerCase();
         return searchValue.includes(searchTerm.toLowerCase());
       });
-
       setFilteredTickets(filtered);
     };
-
     filterTickets();
   }, [searchTerm, searchField, tickets]);
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
+    setError(null);
+
+    // Sanitize inputs
+    const sanitizedTicket = {
+      complaint: DOMPurify.sanitize(newTicket.complaint),
+      incNumber: DOMPurify.sanitize(newTicket.incNumber),
+      msisdn: DOMPurify.sanitize(newTicket.msisdn),
+      submittedBy: DOMPurify.sanitize(newTicket.submittedBy),
+      description: DOMPurify.sanitize(newTicket.description),
+    };
+
+    // Validate inputs
+    const { error: validationError } = ticketSchema.validate(sanitizedTicket);
+    if (validationError) {
+      setError(validationError.message);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      await createTicket(newTicket);
+      await createTicket(sanitizedTicket);
       await fetchTickets();
       setShowNewTicketForm(false);
       setNewTicket({
+        complaint: "",
         incNumber: "",
         msisdn: "",
         submittedBy: "",
-        description: ""
+        description: "",
       });
     } catch (err) {
-      setError("Failed to create ticket");
+      setError("Failed to create ticket.");
     } finally {
       setIsLoading(false);
     }
@@ -103,40 +136,38 @@ const Tickets = () => {
 
   const handleCloseTicket = async (ticketId) => {
     if (!closeNote) {
-      setError("Please add a closing note");
+      setError("Please add a closing note.");
       return;
     }
-  
     try {
       await closeTicket(ticketId, closeNote);
       setCloseNote("");
       setTicketToClose(null);
       await fetchTickets();
     } catch (err) {
-      setError("Failed to close ticket");
+      setError("Failed to close ticket.");
     }
   };
 
   const handleEscalate = async (ticketId) => {
     if (!escalationNote) {
-      setError("Please add a note before escalating");
+      setError("Please add a note before escalating.");
       return;
     }
-
     try {
       await escalateTicket(ticketId, escalationNote);
       setEscalationNote("");
       setSelectedTicket(null);
       await fetchTickets();
     } catch (err) {
-      setError("Failed to escalate ticket");
+      setError("Failed to escalate ticket.");
     }
   };
 
   return (
     <div className="m-2 md:m-10 mt-24 p-2 md:p-10 bg-white rounded-3xl">
       <Header category="Pages" title="Tickets" />
-      
+
       {/* Search Section */}
       <div className="mb-6 flex flex-wrap gap-4">
         <select
@@ -145,6 +176,7 @@ const Tickets = () => {
           className="p-2 border rounded"
         >
           <option value="ticketNumber">Ticket Number</option>
+          <option value="complaintNumber">Complaint Number</option>
           <option value="incNumber">INC Number</option>
           <option value="msisdn">MSISDN</option>
           <option value="submittedBy">Submitted By</option>
@@ -159,9 +191,7 @@ const Tickets = () => {
       </div>
 
       {error && (
-        <div className="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
-          {error}
-        </div>
+        <div className="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">{error}</div>
       )}
 
       <button
@@ -175,33 +205,48 @@ const Tickets = () => {
         <form onSubmit={handleCreateTicket} className="mb-8 bg-gray-50 p-6 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
+              id="complaint"
+              type="text"
+              placeholder="Complaint Number"
+              value={newTicket.complaint}
+              onChange={(e) => setNewTicket({ ...newTicket, complaint: e.target.value })}
+              className="p-2 border rounded"
+              required
+            />
+            <input
+              id="inc_number"
               type="text"
               placeholder="INC Number"
               value={newTicket.incNumber}
-              onChange={(e) => setNewTicket({...newTicket, incNumber: e.target.value})}
+              onChange={(e) => setNewTicket({ ...newTicket, incNumber: e.target.value })}
               className="p-2 border rounded"
               required
             />
             <input
+              id="msisdn"
               type="text"
               placeholder="MSISDN"
               value={newTicket.msisdn}
-              onChange={(e) => setNewTicket({...newTicket, msisdn: e.target.value})}
+              onChange={(e) => setNewTicket({ ...newTicket, msisdn: e.target.value })}
               className="p-2 border rounded"
               required
             />
             <input
+              id="submitted_by"
               type="text"
               placeholder="Submitted By"
               value={newTicket.submittedBy}
-              onChange={(e) => setNewTicket({...newTicket, submittedBy: e.target.value})}
+              onChange={(e) =>
+                setNewTicket({ ...newTicket, submittedBy: e.target.value })
+              }
               className="p-2 border rounded"
               required
             />
             <textarea
+              id="description"
               placeholder="Description"
               value={newTicket.description}
-              onChange={(e) => setNewTicket({...newTicket, description: e.target.value})}
+              onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
               className="p-2 border rounded md:col-span-2"
               rows="4"
               required
@@ -225,41 +270,51 @@ const Tickets = () => {
           {filteredTickets.map((ticket) => {
             const timeRemaining = getTimeRemaining(ticket.dueDate);
             const escalationColor = getEscalationColor(ticket.escalationLevel);
-            
+
             return (
               <div
                 key={ticket.id}
                 className={`border-2 rounded-lg p-4 ${escalationColor}`}
               >
+                {/* Ticket Details */}
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h3 className="font-bold text-lg">Ticket: {ticket.ticketNumber}</h3>
-                    <p>INC: {ticket.incNumber}</p>
+                    <p>Complaint: {ticket.complaint}</p>
+                    <p>INC Number: {ticket.incNumber}</p>
                     <p>MSISDN: {ticket.msisdn}</p>
                     <p>Submitted By: {ticket.submittedBy}</p>
                     <p>Description: {ticket.description}</p>
                   </div>
                   <div className="text-right">
-  <p className="font-bold">Level {ticket.escalationLevel}</p>
-  <p className={`${
-    ticket.state === "Closed" 
-      ? "bg-gray-500 text-white px-2 py-1 rounded-full text-sm" 
-      : ""
-  }`}>
-    State: {ticket.state}
-  </p>
-  {ticket.closedAt && (
-    <p className="text-xs text-gray-500">
-      Closed: {new Date(ticket.closedAt).toLocaleString()}
-    </p>
-  )}
-</div>
+                    <p className="font-bold">Level {ticket.escalationLevel}</p>
+                    <p
+                      className={`${
+                        ticket.state === "Closed"
+                          ? "bg-gray-500 text-white px-2 py-1 rounded-full text-sm"
+                          : ""
+                      }`}
+                    >
+                      State: {ticket.state}
+                    </p>
+                    {ticket.closedAt && (
+                      <p className="text-xs text-gray-500">
+                        Closed: {new Date(ticket.closedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
+                {/* Time Remaining */}
                 <div className="mt-4 p-2 bg-white bg-opacity-50 rounded">
                   <p className="font-semibold">Time Remaining:</p>
-                  <p>{timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m</p>
-                  <p className="text-sm text-gray-600">Created: {new Date(ticket.createdAt).toLocaleString()}</p>
+                  <p>
+                    {timeRemaining.days}d {timeRemaining.hours}h{" "}
+                    {timeRemaining.minutes}m
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Created: {new Date(ticket.createdAt).toLocaleString()}
+                  </p>
                 </div>
 
                 {/* Notes Section */}
@@ -267,64 +322,63 @@ const Tickets = () => {
                   <h4 className="font-semibold mb-2">Notes:</h4>
                   <div className="max-h-40 overflow-y-auto">
                     {ticket.notes?.map((note) => (
-                      <div key={note.id} className="mb-2 p-2 bg-white bg-opacity-75 rounded">
+                      <div
+                        key={note.id}
+                        className="mb-2 p-2 bg-white bg-opacity-75 rounded"
+                      >
                         <p className="text-sm">{note.content}</p>
                         <p className="text-xs text-gray-500">
-                          Level {note.escalationLevel} - {new Date(note.createdAt).toLocaleString()}
+                          Level {note.escalationLevel} -{" "}
+                          {new Date(note.createdAt).toLocaleString()}
                         </p>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* ------------------------------------------------------------------------------------------------- */}
+                {/* Close and Escalation Buttons */}
                 {ticket.state !== "Closed" && (
-  <>
-    {ticketToClose === ticket.id ? (
-      <div className="mt-4 border-t pt-4">
-        <textarea
-          value={closeNote}
-          onChange={(e) => setCloseNote(e.target.value)}
-          placeholder="Add closing note..."
-          className="w-full p-2 border rounded mb-2"
-          rows="2"
-        />
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => {
-              setTicketToClose(null);
-              setCloseNote("");
-            }}
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => handleCloseTicket(ticket.id)}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-          >
-            Confirm Close
-          </button>
-        </div>
-      </div>
-    ) : (
-      <div className="mt-4 flex justify-end gap-2">
-        <button
-          onClick={() => setTicketToClose(ticket.id)}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          Close Ticket
-        </button>
-        {/* Keep existing Escalate button here */}
-      </div>
-    )}
-  </>
-)}
-                {/* ------------------------------------------------------------------------------------------------- */}
+                  <>
+                    {ticketToClose === ticket.id ? (
+                      <div className="mt-4 border-t pt-4">
+                        <textarea
+                          value={closeNote}
+                          onChange={(e) => setCloseNote(e.target.value)}
+                          placeholder="Add closing note..."
+                          className="w-full p-2 border rounded mb-2"
+                          rows="2"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setTicketToClose(null);
+                              setCloseNote("");
+                            }}
+                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleCloseTicket(ticket.id)}
+                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                          >
+                            Confirm Close
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-4 flex justify-end gap-2">
+                        <button
+                          onClick={() => setTicketToClose(ticket.id)}
+                          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                          Close Ticket
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
 
-                
-
-                {/* Escalation Section */}
                 {selectedTicket === ticket.id ? (
                   <div className="mt-4">
                     <textarea
@@ -374,3 +428,9 @@ const Tickets = () => {
 };
 
 export default Tickets;
+
+
+// ---------------------------------- Working Code Above --------------------------------------------
+
+// ---------------------------------- Testing Code Below --------------------------------------------
+
