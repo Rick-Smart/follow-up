@@ -13,11 +13,15 @@ import { useNavigate } from "react-router-dom";
 import avatar from "../data/avatar.jpg";
 
 // Context from react context store
-import { useStateContext } from "../contexts/ContextProvider.js";
+import { useMenuContext } from "../contexts/MenuContext";
+import { useScreenSizeContext } from "../contexts/ScreenSizeContext";
+import { useUserContext } from "../contexts/UserContext";
 
 const Navbar = () => {
-  const { setActiveMenu, screenSize, setScreenSize, user, setActiveUser } =
-    useStateContext();
+  const { setActiveMenu } = useMenuContext();
+
+  const { setScreenSize } = useScreenSizeContext();
+  const { user } = useUserContext();
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -27,7 +31,6 @@ const Navbar = () => {
     setIsLoggingOut(true);
     try {
       await signOutUser();
-      setActiveUser(null);
       navigate("/");
     } catch (error) {
       console.error("Error during logout:", error);
@@ -45,12 +48,12 @@ const Navbar = () => {
   }, [setScreenSize]);
 
   useEffect(() => {
-    if (screenSize <= 900) {
+    if (window.innerWidth <= 900) {
       setActiveMenu(false);
     } else {
       setActiveMenu(true);
     }
-  }, [screenSize, setActiveMenu]);
+  }, [setActiveMenu]);
 
   const handleGenerateTestUsers = async () => {
     setIsGenerating(true);

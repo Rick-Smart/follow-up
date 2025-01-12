@@ -14,12 +14,12 @@ const Profile = () => {
     setSuccess(false);
 
     try {
-      const userId = getCurrentUser();
-      if (!userId) {
-        throw new Error("No user found");
+      const user = getCurrentUser();
+      if (!user || typeof user.uid !== "string") {
+        throw new Error("No valid user found");
       }
 
-      const success = await makeAdmin(userId);
+      const success = await makeAdmin(user.uid);
       if (success) {
         setSuccess(true);
         // Reload the page to update the UI with new permissions

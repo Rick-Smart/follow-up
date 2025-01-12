@@ -1,20 +1,34 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useUserContext } from "../contexts/UserContext";
+
 import { Header } from "../components";
 import TextEditor from "../components/TextEditor";
-import { getNotes, createNote, updateNote, deleteNote } from "../utils/notesController";
+import {
+  getNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+} from "../utils/notesController";
 
 const Notes = () => {
+  const { currentUser } = useUserContext();
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
+    if (!currentUser) {
+      setError("User not authenticated");
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      const fetchedNotes = await getNotes();
+      const fetchedNotes = await getNotes(); // Ensure this function handles unauthenticated requests
+
       setNotes(fetchedNotes);
     } catch (err) {
       setError("Failed to load notes. Please try again later.");
@@ -22,7 +36,11 @@ const Notes = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
 
   const handleSaveNote = async (noteData) => {
     try {
@@ -60,7 +78,7 @@ const Notes = () => {
         setError(null);
         await deleteNote(noteId);
         await fetchNotes();
-        
+
         if (selectedNote?.id === noteId) {
           setSelectedNote(null);
           setIsEditing(false);
@@ -79,14 +97,10 @@ const Notes = () => {
     setIsEditing(false);
   };
 
-  useEffect(() => {
-    fetchNotes();
-  }, []);
-
   return (
     <div className="m-2 md:m-10 mt-24 p-2 md:p-10 bg-white rounded-3xl">
       <Header category="Apps" title="Notes" />
-      
+
       {error && (
         <div className="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
           {error}
@@ -94,7 +108,7 @@ const Notes = () => {
       )}
 
       <div className="mb-8">
-        <TextEditor 
+        <TextEditor
           onSave={handleSaveNote}
           initialContent={selectedNote?.body || ""}
           initialTitle={selectedNote?.title || ""}
@@ -119,12 +133,12 @@ const Notes = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {notes.map((note) => (
-              <div 
-                key={note.id} 
+              <div
+                key={note.id}
                 className="p-4 border rounded-lg shadow hover:shadow-md transition-shadow"
               >
                 <h3 className="font-bold mb-2">{note.title}</h3>
-                <div 
+                <div
                   className="text-gray-600 max-h-32 overflow-hidden mb-4"
                   dangerouslySetInnerHTML={{ __html: note.body }}
                 />
@@ -162,38 +176,3 @@ const Notes = () => {
 };
 
 export default Notes;
-
-// ---------------------------------------------------------------------------------------------------
-
-// import React from "react";
-
-// // this will be replaced with a form that can be used to track progress of field completion
-// import TextEditor from "../components/TextEditor";
-
-// // these will most likely need to be moved to the text editor component
-// import { setNote, getNotes, getNotifications } from "../utils/controller";
-
-// import { Header } from "../components";
-
-// const Notes = () => {
-//   return (
-//     <div className="m-2 md:m-10 mt-24 p-2 md:p-10 bg-white rounded-3xl">
-//       <Header category="Apps" title="Notes" />
-//       <TextEditor />
-//       <div>
-
-//       <button onClick={setNote}>save note</button>
-//       </div>
-//       <div>
-//       <button onClick={getNotes}>get notes</button>
-
-//       </div>
-//       <div>
-//       <button onClick={getNotifications}>get notifications</button>
-
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Notes;

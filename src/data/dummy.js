@@ -9,7 +9,7 @@ import { FiEdit } from "react-icons/fi";
 import { IoMdContacts } from "react-icons/io";
 import { RiCustomerServiceLine } from "react-icons/ri";
 import { MdOutlineSupervisorAccount } from "react-icons/md";
-import { USER_ROLES } from "../utils/controller";
+import { USER_ROLES } from "../utils/userController";
 
 export const gridOrderImage = (props) => (
   <div>

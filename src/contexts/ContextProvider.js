@@ -19,20 +19,19 @@ const initialMain = {
   UserManagement: false,
 };
 
-// Helper function to safely parse JSON
+// Helper function to safely parse JSON from localStorage
 const safeParse = (key, defaultValue) => {
   try {
-    const saved = localStorage.getItem(key);
-    return saved !== null ? JSON.parse(saved) : defaultValue;
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
   } catch (error) {
     console.error(`Error parsing ${key} from localStorage:`, error);
-    localStorage.removeItem(key); // Remove invalid data
     return defaultValue;
   }
 };
 
 export const ContextProvider = ({ children }) => {
-  // Load state from localStorage or use initial values
+  // Initialize state with localStorage values or defaults
   const [activeMenu, setActiveMenu] = useState(() =>
     safeParse("activeMenu", true)
   );
@@ -45,17 +44,11 @@ export const ContextProvider = ({ children }) => {
     safeParse("screenSize", undefined)
   );
 
-  const [user, setUser] = useState(() => safeParse("user", null));
-
   const [activeMain, setActiveMain] = useState(() =>
     safeParse("activeMain", initialMain)
   );
 
-  const [currentUser, setCurrentUser] = useState(() =>
-    safeParse("currentUser", false)
-  );
-
-  // Save to localStorage whenever state changes
+  // Persist state changes to localStorage
   useEffect(() => {
     localStorage.setItem("activeMenu", JSON.stringify(activeMenu));
   }, [activeMenu]);
@@ -69,41 +62,23 @@ export const ContextProvider = ({ children }) => {
   }, [screenSize]);
 
   useEffect(() => {
-    localStorage.setItem("user", JSON.stringify(user));
-  }, [user]);
-
-  useEffect(() => {
     localStorage.setItem("activeMain", JSON.stringify(activeMain));
   }, [activeMain]);
 
+  // Screen size listener
   useEffect(() => {
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-  }, [currentUser]);
+    const handleResize = () => setScreenSize(window.innerWidth);
+    window.addEventListener("resize", handleResize);
 
+    // Initial size check
+    handleResize();
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Handle UI state changes
   const handleClick = (clicked) => {
     setIsClicked({ ...initialState, [clicked]: true });
-  };
-
-  const setActiveUser = (userData) => {
-    try {
-      if (!userData) {
-        setUser(null);
-        setCurrentUser(false);
-        return;
-      }
-
-      const userWithRole = {
-        ...userData,
-        role: userData.role || "agent", // Default to 'agent' if role not provided
-      };
-      setUser(userWithRole);
-      setCurrentUser(true);
-      localStorage.setItem("user", JSON.stringify(userWithRole));
-      localStorage.setItem("currentUser", true);
-      localStorage.setItem("userRole", userWithRole.role);
-    } catch (error) {
-      console.error("Error setting active user:", error);
-    }
   };
 
   const handleMainVisible = (main) => {
@@ -112,6 +87,11 @@ export const ContextProvider = ({ children }) => {
       return acc;
     }, {});
     setActiveMain({ ...resetState, [main]: true });
+  };
+
+  const resetState = () => {
+    setIsClicked(initialState);
+    setActiveMain(initialMain);
   };
 
   return (
@@ -124,12 +104,11 @@ export const ContextProvider = ({ children }) => {
         handleClick,
         screenSize,
         setScreenSize,
-        user,
-        setActiveUser,
         activeMain,
         setActiveMain,
         handleMainVisible,
-        currentUser,
+        resetState,
+        // Add any additional values you need to expose
       }}
     >
       {children}
@@ -137,4 +116,10 @@ export const ContextProvider = ({ children }) => {
   );
 };
 
-export const useStateContext = () => useContext(StateContext);
+export const useStateContext = () => {
+  const context = useContext(StateContext);
+  if (!context) {
+    throw new Error("useStateContext must be used within a ContextProvider");
+  }
+  return context;
+};

@@ -1,12 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate, Navigate } from "react-router-dom";
-import { auth, createUserWithEmailAndPassword } from "../firebase";
-import { useStateContext } from "../contexts/ContextProvider";
-import {
-  checkAdminExists,
-  createNewUserCollection,
-  USER_ROLES,
-} from "../utils/controller";
+import { registerUser } from "../utils/authController";
+import { useUserContext } from "../contexts/UserContext";
+import { checkAdminExists, USER_ROLES } from "../utils/userController";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -14,16 +10,16 @@ function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isFirstUser, setIsFirstUser] = useState(false);
 
-  const { setActiveUser } = useStateContext();
+  const { updateUser, currentUser } = useUserContext();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkFirstUser = async () => {
       try {
         const adminExists = await checkAdminExists();
-        setIsAdmin(adminExists);
+        setIsFirstUser(!adminExists);
       } catch (error) {
         setError("Error checking admin status. Please try again.");
         console.error("Error checking admin:", error);
@@ -32,7 +28,7 @@ function Register() {
       }
     };
 
-    checkAdminStatus();
+    checkFirstUser();
   }, []);
 
   const validateInputs = () => {
@@ -63,29 +59,24 @@ function Register() {
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError(null);
+    setIsLoading(true);
 
-    if (!isAdmin) {
+    if (!isFirstUser) {
       setError(
-        "Only Admins can create new users. Please contact your administrator."
+        "Registration is currently restricted. Please contact your administrator."
       );
+      setIsLoading(false);
       return;
     }
 
     if (!validateInputs()) {
+      setIsLoading(false);
       return;
     }
 
     try {
-      setIsLoading(true);
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
-
-      await createNewUserCollection(user, USER_ROLES.AGENT);
-      setActiveUser(user);
+      const user = await registerUser(email, password, USER_ROLES.ADMIN);
+      updateUser(user);
       navigate("/dashboard");
     } catch (error) {
       console.error("Registration error:", error);
@@ -103,14 +94,14 @@ function Register() {
           setError("Password is too weak");
           break;
         default:
-          setError("An error occurred during registration. Please try again.");
+          setError("Registration failed. Please try again.");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (auth.currentUser) {
+  if (currentUser) {
     return <Navigate to="/dashboard" replace={true} />;
   }
 
@@ -134,8 +125,8 @@ function Register() {
           <header className="mb-4">
             <h1 className="text-2xl font-bold mb-2">Follow-UP</h1>
             <h2 className="text-gray-500">Register</h2>
-            {isAdmin ? (
-              <p className="text-gray-500">Agent Registration</p>
+            {isFirstUser ? (
+              <p className="text-gray-500">Initial Admin Registration</p>
             ) : (
               <p className="text-red-500">
                 Registration is restricted to administrator only
@@ -149,14 +140,15 @@ function Register() {
             </div>
           )}
 
-          <div className="space-y-4">
+          <form onSubmit={handleSignUp} className="space-y-4">
             <input
               type="email"
               className="border border-gray-200 rounded bg-gray-100 p-2 w-full"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={!isAdmin}
+              disabled={!isFirstUser || isLoading}
+              autoComplete="email"
             />
             <input
               type="password"
@@ -164,7 +156,8 @@ function Register() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              disabled={!isAdmin}
+              disabled={!isFirstUser || isLoading}
+              autoComplete="new-password"
             />
             <input
               type="password"
@@ -172,20 +165,21 @@ function Register() {
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={!isAdmin}
+              disabled={!isFirstUser || isLoading}
+              autoComplete="new-password"
             />
             <button
+              type="submit"
               className={`w-full py-4 px-8 rounded text-white ${
-                isAdmin
-                  ? "bg-blue-500 hover:bg-blue-600"
-                  : "bg-gray-400 cursor-not-allowed"
+                !isFirstUser || isLoading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600"
               }`}
-              onClick={handleSignUp}
-              disabled={!isAdmin || isLoading}
+              disabled={!isFirstUser || isLoading}
             >
-              {isLoading ? "Registering..." : "Register"}
+              {isLoading ? "Creating Account..." : "Register"}
             </button>
-          </div>
+          </form>
 
           <div className="mt-4 text-center">
             <NavLink

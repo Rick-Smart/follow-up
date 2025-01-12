@@ -7,7 +7,7 @@ import {
   deleteUser,
   getUsersByRole,
 } from "../utils/userManagementController";
-import { USER_ROLES } from "../utils/controller";
+import { USER_ROLES } from "../utils/userController";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -158,7 +158,7 @@ const UserManagement = () => {
             {users.length > 0 ? (
               users.map((user) => (
                 <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px极6 py-4 whitespace-nowrap">
                     {editingUser?.id === user.id ? (
                       <input
                         type="text"
@@ -206,7 +206,7 @@ const UserManagement = () => {
                         </button>
                         <button
                           onClick={() => setEditingUser(null)}
-                          className="bg-gray-500 text-white px-2 py-1 rounded"
+                          className="bg-gray-500 text-white px极2 py-1 rounded"
                         >
                           Cancel
                         </button>

@@ -6,7 +6,9 @@ import ListItem from "@mui/material/ListItem";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
-import { useStateContext } from "../contexts/ContextProvider";
+import { useMenuContext } from "../contexts/MenuContext";
+import { useScreenSizeContext } from "../contexts/ScreenSizeContext";
+
 import { NavLink } from "react-router-dom";
 
 function ListItems({ items }) {
@@ -16,7 +18,7 @@ function ListItems({ items }) {
     screenSize,
     activeMain,
     handleMainVisible,
-  } = useStateContext();
+  } = useMenuContext();
 
   const currentRole = localStorage.getItem("userRole");
 

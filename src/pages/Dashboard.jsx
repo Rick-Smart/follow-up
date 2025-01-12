@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { FiSettings } from "react-icons/fi";
 import { TooltipComponent } from "@syncfusion/ej2-react-popups";
-import { useStateContext } from "../contexts/ContextProvider";
+import { useMenuContext } from "../contexts/MenuContext";
+
 import { Navigate } from "react-router-dom";
 import { Navbar, Footer, Sidebar, ThemeSettings } from "../components";
 import {
@@ -15,18 +16,54 @@ import {
   UserManagement,
 } from ".";
 import { auth, onAuthStateChanged } from "../firebase";
+import { useUserContext } from "../contexts/UserContext";
 
 function Dashboard() {
-  const { activeMenu, activeMain, setActiveUser } = useStateContext();
+  const { activeMenu, activeMain } = useMenuContext();
+
+  const { updateUser } = useUserContext();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setActiveUser(currentUser);
+      if (currentUser) {
+        updateUser(currentUser);
+      }
     });
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [updateUser]);
+
+  const mainContent = useMemo(() => {
+    return (
+      <main>
+        <div className={!activeMain.Profile ? "hidden" : undefined}>
+          <Profile />
+        </div>
+        <div className={!activeMain.Employees ? "hidden" : undefined}>
+          <Employees />
+        </div>
+        <div className={!activeMain.Priority ? "hidden" : undefined}>
+          <Urgent />
+        </div>
+        <div className={!activeMain.Editor ? "hidden" : undefined}>
+          <Notes />
+        </div>
+        <div className={!activeMain.Calendar ? "hidden" : undefined}>
+          <Calendar />
+        </div>
+        <div className={!activeMain.LineChart ? "hidden" : undefined}>
+          <LineChart />
+        </div>
+        <div className={!activeMain.Tickets ? "hidden" : undefined}>
+          <Tickets />
+        </div>
+        <div className={!activeMain.UserManagement ? "hidden" : undefined}>
+          <UserManagement />
+        </div>
+      </main>
+    );
+  }, [activeMain]);
 
   return (
     <div>
@@ -60,32 +97,7 @@ function Dashboard() {
           <div className="fixed md:static bg-main-bg dark:bg-main-bg navbar w-full">
             <Navbar />
           </div>
-          <main>
-            <div className={!activeMain.Profile && "hidden"}>
-              <Profile />
-            </div>
-            <div className={!activeMain.Employees && "hidden"}>
-              <Employees />
-            </div>
-            <div className={!activeMain.Priority && "hidden"}>
-              <Urgent />
-            </div>
-            <div className={!activeMain.Editor && "hidden"}>
-              <Notes />
-            </div>
-            <div className={!activeMain.Calendar && "hidden"}>
-              <Calendar />
-            </div>
-            <div className={!activeMain.LineChart && "hidden"}>
-              <LineChart />
-            </div>
-            <div className={!activeMain.Tickets && "hidden"}>
-              <Tickets />
-            </div>
-            <div className={!activeMain.UserManagement && "hidden"}>
-              <UserManagement />
-            </div>
-          </main>
+          {mainContent}
           <Footer />
         </div>
       </div>

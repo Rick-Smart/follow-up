@@ -6,11 +6,13 @@ import ListItems from "./ListItems";
 // Dummy Data for testing
 import { links } from "../data/dummy";
 // import for react context store
-import { useStateContext } from "../contexts/ContextProvider";
+import { useMenuContext } from "../contexts/MenuContext";
+import { useScreenSizeContext } from "../contexts/ScreenSizeContext";
 
 const Sidebar = () => {
   // context provided by react context
-  const { activeMenu, setActiveMenu, screenSize } = useStateContext();
+  const { activeMenu, setActiveMenu } = useMenuContext();
+  const { screenSize } = useScreenSizeContext();
 
   const handleCloseSideBar = () => {
     if (activeMenu && screenSize <= 900) {

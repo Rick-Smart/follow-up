@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Header } from "../components";
 import TicketsCard from "../components/TicketsCard";
 import {
@@ -49,7 +49,7 @@ const Tickets = () => {
     description: "",
   });
 
-  const loadTickets = async () => {
+  const loadTickets = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -61,7 +61,7 @@ const Tickets = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -73,7 +73,7 @@ const Tickets = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loadTickets]);
 
   useEffect(() => {
     let isMounted = true;
@@ -274,6 +274,7 @@ const Tickets = () => {
           <button
             type="submit"
             className="mt-4 px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            disabled={isLoading}
           >
             Create Ticket
           </button>
