@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "../components";
+import TicketsCard from "../components/TicketsCard";
 import {
   createTicket,
   getTickets,
   escalateTicket,
-  addNoteToTicket,
   closeTicket,
 } from "../utils/ticketsController";
 import Joi from "joi";
@@ -17,18 +17,6 @@ const getTimeRemaining = (dueDate) => {
   const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
   const minutes = Math.floor((total / 1000 / 60) % 60);
   return { total, days, hours, minutes };
-};
-
-// Helper function to get color based on escalation level
-const getEscalationColor = (level) => {
-  const colors = {
-    1: "bg-green-100 border-green-500",
-    2: "bg-blue-100 border-blue-500",
-    3: "bg-yellow-100 border-yellow-500",
-    4: "bg-orange-100 border-orange-500",
-    5: "bg-red-100 border-red-500",
-  };
-  return colors[level] || colors[1];
 };
 
 // Validation schema for tickets
@@ -52,6 +40,7 @@ const Tickets = () => {
   const [searchField, setSearchField] = useState("ticketNumber");
   const [escalationNote, setEscalationNote] = useState("");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [expandedTicket, setExpandedTicket] = useState(null);
   const [newTicket, setNewTicket] = useState({
     complaint: "",
     incNumber: "",
@@ -60,7 +49,7 @@ const Tickets = () => {
     description: "",
   });
 
-  const fetchTickets = async () => {
+  const loadTickets = async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -75,24 +64,37 @@ const Tickets = () => {
   };
 
   useEffect(() => {
-    fetchTickets();
-    // const timer = setInterval(fetchTickets, 60000); // Refresh every minute
-    // return () => clearInterval(timer);
+    let isMounted = true;
+
+    if (isMounted) {
+      loadTickets();
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     const filterTickets = () => {
       if (!searchTerm) {
-        setFilteredTickets(tickets);
+        if (isMounted) setFilteredTickets(tickets);
         return;
       }
       const filtered = tickets.filter((ticket) => {
         const searchValue = String(ticket[searchField] || "").toLowerCase();
         return searchValue.includes(searchTerm.toLowerCase());
       });
-      setFilteredTickets(filtered);
+      if (isMounted) setFilteredTickets(filtered);
     };
+
     filterTickets();
+
+    return () => {
+      isMounted = false;
+    };
   }, [searchTerm, searchField, tickets]);
 
   const handleCreateTicket = async (e) => {
@@ -118,7 +120,7 @@ const Tickets = () => {
     try {
       setIsLoading(true);
       await createTicket(sanitizedTicket);
-      await fetchTickets();
+      await loadTickets();
       setShowNewTicketForm(false);
       setNewTicket({
         complaint: "",
@@ -143,7 +145,7 @@ const Tickets = () => {
       await closeTicket(ticketId, closeNote);
       setCloseNote("");
       setTicketToClose(null);
-      await fetchTickets();
+      await loadTickets();
     } catch (err) {
       setError("Failed to close ticket.");
     }
@@ -158,10 +160,14 @@ const Tickets = () => {
       await escalateTicket(ticketId, escalationNote);
       setEscalationNote("");
       setSelectedTicket(null);
-      await fetchTickets();
+      await loadTickets();
     } catch (err) {
       setError("Failed to escalate ticket.");
     }
+  };
+
+  const handleToggleExpand = (ticketId) => {
+    setExpandedTicket(expandedTicket === ticketId ? null : ticketId);
   };
 
   return (
@@ -191,7 +197,9 @@ const Tickets = () => {
       </div>
 
       {error && (
-        <div className="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">{error}</div>
+        <div className="p-4 mb-4 text-red-700 bg-red-100 rounded-lg">
+          {error}
+        </div>
       )}
 
       <button
@@ -202,14 +210,19 @@ const Tickets = () => {
       </button>
 
       {showNewTicketForm && (
-        <form onSubmit={handleCreateTicket} className="mb-8 bg-gray-50 p-6 rounded-lg">
+        <form
+          onSubmit={handleCreateTicket}
+          className="mb-8 bg-gray-50 p-6 rounded-lg"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               id="complaint"
               type="text"
               placeholder="Complaint Number"
               value={newTicket.complaint}
-              onChange={(e) => setNewTicket({ ...newTicket, complaint: e.target.value })}
+              onChange={(e) =>
+                setNewTicket({ ...newTicket, complaint: e.target.value })
+              }
               className="p-2 border rounded"
               required
             />
@@ -218,7 +231,9 @@ const Tickets = () => {
               type="text"
               placeholder="INC Number"
               value={newTicket.incNumber}
-              onChange={(e) => setNewTicket({ ...newTicket, incNumber: e.target.value })}
+              onChange={(e) =>
+                setNewTicket({ ...newTicket, incNumber: e.target.value })
+              }
               className="p-2 border rounded"
               required
             />
@@ -227,7 +242,9 @@ const Tickets = () => {
               type="text"
               placeholder="MSISDN"
               value={newTicket.msisdn}
-              onChange={(e) => setNewTicket({ ...newTicket, msisdn: e.target.value })}
+              onChange={(e) =>
+                setNewTicket({ ...newTicket, msisdn: e.target.value })
+              }
               className="p-2 border rounded"
               required
             />
@@ -246,7 +263,9 @@ const Tickets = () => {
               id="description"
               placeholder="Description"
               value={newTicket.description}
-              onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+              onChange={(e) =>
+                setNewTicket({ ...newTicket, description: e.target.value })
+              }
               className="p-2 border rounded md:col-span-2"
               rows="4"
               required
@@ -266,159 +285,45 @@ const Tickets = () => {
           <div className="text-gray-600">Loading...</div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {filteredTickets.map((ticket) => {
             const timeRemaining = getTimeRemaining(ticket.dueDate);
-            const escalationColor = getEscalationColor(ticket.escalationLevel);
+            const ticketData = {
+              title: `Ticket: ${ticket.ticketNumber}`,
+              description: ticket.description,
+              escalationLevel: `Level ${ticket.escalationLevel}`,
+              details: {
+                complaint: ticket.complaint,
+                incNumber: ticket.incNumber,
+                msisdn: ticket.msisdn,
+                submittedBy: ticket.submittedBy,
+                state: ticket.state,
+                createdAt: new Date(ticket.createdAt).toLocaleString(),
+                closedAt: ticket.closedAt
+                  ? new Date(ticket.closedAt).toLocaleString()
+                  : null,
+                timeRemaining: `${timeRemaining.days}d ${timeRemaining.hours}h ${timeRemaining.minutes}m`,
+                notes: ticket.notes || [],
+              },
+            };
 
             return (
-              <div
+              <TicketsCard
                 key={ticket.id}
-                className={`border-2 rounded-lg p-4 ${escalationColor}`}
-              >
-                {/* Ticket Details */}
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-bold text-lg">Ticket: {ticket.ticketNumber}</h3>
-                    <p>Complaint: {ticket.complaint}</p>
-                    <p>INC Number: {ticket.incNumber}</p>
-                    <p>MSISDN: {ticket.msisdn}</p>
-                    <p>Submitted By: {ticket.submittedBy}</p>
-                    <p>Description: {ticket.description}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold">Level {ticket.escalationLevel}</p>
-                    <p
-                      className={`${
-                        ticket.state === "Closed"
-                          ? "bg-gray-500 text-white px-2 py-1 rounded-full text-sm"
-                          : ""
-                      }`}
-                    >
-                      State: {ticket.state}
-                    </p>
-                    {ticket.closedAt && (
-                      <p className="text-xs text-gray-500">
-                        Closed: {new Date(ticket.closedAt).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Time Remaining */}
-                <div className="mt-4 p-2 bg-white bg-opacity-50 rounded">
-                  <p className="font-semibold">Time Remaining:</p>
-                  <p>
-                    {timeRemaining.days}d {timeRemaining.hours}h{" "}
-                    {timeRemaining.minutes}m
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Created: {new Date(ticket.createdAt).toLocaleString()}
-                  </p>
-                </div>
-
-                {/* Notes Section */}
-                <div className="mt-4 border-t pt-4">
-                  <h4 className="font-semibold mb-2">Notes:</h4>
-                  <div className="max-h-40 overflow-y-auto">
-                    {ticket.notes?.map((note) => (
-                      <div
-                        key={note.id}
-                        className="mb-2 p-2 bg-white bg-opacity-75 rounded"
-                      >
-                        <p className="text-sm">{note.content}</p>
-                        <p className="text-xs text-gray-500">
-                          Level {note.escalationLevel} -{" "}
-                          {new Date(note.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Close and Escalation Buttons */}
-                {ticket.state !== "Closed" && (
-                  <>
-                    {ticketToClose === ticket.id ? (
-                      <div className="mt-4 border-t pt-4">
-                        <textarea
-                          value={closeNote}
-                          onChange={(e) => setCloseNote(e.target.value)}
-                          placeholder="Add closing note..."
-                          className="w-full p-2 border rounded mb-2"
-                          rows="2"
-                        />
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setTicketToClose(null);
-                              setCloseNote("");
-                            }}
-                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleCloseTicket(ticket.id)}
-                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                          >
-                            Confirm Close
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-4 flex justify-end gap-2">
-                        <button
-                          onClick={() => setTicketToClose(ticket.id)}
-                          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                        >
-                          Close Ticket
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {selectedTicket === ticket.id ? (
-                  <div className="mt-4">
-                    <textarea
-                      value={escalationNote}
-                      onChange={(e) => setEscalationNote(e.target.value)}
-                      placeholder="Add escalation note..."
-                      className="w-full p-2 border rounded mb-2"
-                      rows="2"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedTicket(null);
-                          setEscalationNote("");
-                        }}
-                        className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => handleEscalate(ticket.id)}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                        disabled={ticket.escalationLevel >= 5}
-                      >
-                        Confirm Escalation
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 flex justify-end">
-                    <button
-                      onClick={() => setSelectedTicket(ticket.id)}
-                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                      disabled={ticket.escalationLevel >= 5}
-                    >
-                      Escalate
-                    </button>
-                  </div>
-                )}
-              </div>
+                ticket={ticketData}
+                onClose={() => setTicketToClose(ticket.id)}
+                onEscalate={() => setSelectedTicket(ticket.id)}
+                isClosing={ticketToClose === ticket.id}
+                isEscalating={selectedTicket === ticket.id}
+                closeNote={closeNote}
+                onCloseNoteChange={setCloseNote}
+                onConfirmClose={() => handleCloseTicket(ticket.id)}
+                escalationNote={escalationNote}
+                onEscalationNoteChange={setEscalationNote}
+                onConfirmEscalate={() => handleEscalate(ticket.id)}
+                isExpanded={expandedTicket === ticket.id}
+                onToggleExpand={() => handleToggleExpand(ticket.id)}
+              />
             );
           })}
         </div>
@@ -428,9 +333,3 @@ const Tickets = () => {
 };
 
 export default Tickets;
-
-
-// ---------------------------------- Working Code Above --------------------------------------------
-
-// ---------------------------------- Testing Code Below --------------------------------------------
-

@@ -6,7 +6,6 @@ import ListItem from "@mui/material/ListItem";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
-
 import { useStateContext } from "../contexts/ContextProvider";
 import { NavLink } from "react-router-dom";
 
@@ -18,10 +17,20 @@ function ListItems({ items }) {
     activeMain,
     handleMainVisible,
   } = useStateContext();
+
+  const currentRole = localStorage.getItem("userRole");
+
   const activeLink =
     "flex items-center gap-5 pl-4 rounded-lg text-white bg-gray-400 text-md m-2 cursor-pointer";
   const normalLink =
     "flex items-center gap-5 pl-4 rounded-lg text-md text-gray-700 dark:text-gray-200 dark:hover:text-black hover:bg-light-gray m-2 cursor-pointer";
+
+  const filterLinks = (links) => {
+    return links.filter((link) => {
+      if (!link.visibleTo) return true;
+      return link.visibleTo.includes(currentRole);
+    });
+  };
 
   return (
     <Grid container spacing={2}>
@@ -34,13 +43,11 @@ function ListItems({ items }) {
                   {item.title}
                 </Typography>
               </ListItem>
-              {item.links.map((link) => (
+              {filterLinks(item.links).map((link) => (
                 <div
                   key={link.name}
                   onClick={() => handleMainVisible(`${link.name}`)}
-                  className={
-                    activeMenu ?  normalLink : activeLink
-                  }
+                  className={activeMenu ? normalLink : activeLink}
                 >
                   <ListItem>
                     <ListItemAvatar>

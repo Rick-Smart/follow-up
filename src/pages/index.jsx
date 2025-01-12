@@ -8,3 +8,4 @@ export { default as Register } from "./Register";
 export { default as Dashboard } from "./Dashboard";
 export { default as Tickets } from "./Tickets";
 export { default as LineChart } from "./Charts/LineChart";
+export { default as UserManagement } from "./UserManagement";

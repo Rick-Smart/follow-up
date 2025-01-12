@@ -4,7 +4,16 @@ import { TooltipComponent } from "@syncfusion/ej2-react-popups";
 import { useStateContext } from "../contexts/ContextProvider";
 import { Navigate } from "react-router-dom";
 import { Navbar, Footer, Sidebar, ThemeSettings } from "../components";
-import { Calendar, Employees, Notes, Urgent, LineChart, Profile, Tickets } from ".";
+import {
+  Calendar,
+  Employees,
+  Notes,
+  Urgent,
+  LineChart,
+  Profile,
+  Tickets,
+  UserManagement,
+} from ".";
 import { auth, onAuthStateChanged } from "../firebase";
 
 function Dashboard() {
@@ -72,6 +81,9 @@ function Dashboard() {
             </div>
             <div className={!activeMain.Tickets && "hidden"}>
               <Tickets />
+            </div>
+            <div className={!activeMain.UserManagement && "hidden"}>
+              <UserManagement />
             </div>
           </main>
           <Footer />

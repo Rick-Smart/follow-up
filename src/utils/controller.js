@@ -1,160 +1,84 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
-  addDoc,
-  updateDoc,
+  query,
+  where,
 } from "firebase/firestore";
 import { fireStore } from "../firebase";
 
-// User management functions using localStorage
-const getCurrentUser = () => {
-  return localStorage.getItem('currentUser');
+// Updated USER_ROLES with new roles
+export const USER_ROLES = {
+  ADMIN: "admin",
+  DIRECTOR: "director",
+  SR_OPERATIONS_MANAGER: "sr_operations_manager",
+  OPERATIONS_MANAGER: "operations_manager",
+  HR: "hr",
+  COACH: "coach",
+  POD: "pod",
+  AGENT: "agent",
 };
 
-const setCurrentUserStorage = (uid) => {
-  localStorage.setItem('currentUser', uid);
-};
-
-// this is the current number of collections to add to each user
-const model = ["notes", "notifications", "employees", "priority", "calendar", "tickets"];
-
-// function for initializing current user on login / register
-function setCurrentUser(user) {
-  setCurrentUserStorage(user.uid);
-}
-
-// gets reference to complete list of all users
-const getUsersCollection = () => {
-  return collection(fireStore, "users");
-};
-
-// gets reference to only the active user
-const getSingleUserDoc = () => {
-  const currentUser = getCurrentUser();
-  
-  if (!currentUser) {
-    console.error('No user is currently logged in');
-    return null;
+export const setCurrentUser = (user, role) => {
+  if (!user || !role || typeof role !== "string") {
+    console.error("Invalid user or role provided");
+    return;
   }
 
-  return doc(fireStore, "users", currentUser);
+  try {
+    localStorage.setItem("currentUser", user.uid);
+    localStorage.setItem("userRole", role);
+  } catch (error) {
+    console.error("Error setting current user:", error);
+  }
 };
 
-// this is the loop we are running to create every collection the user needs
-const createUserModel = async (item) => {
+export const checkAdminExists = async () => {
   try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      console.error('No user document reference available');
-      return;
+    const usersRef = collection(fireStore, "users");
+    const q = query(usersRef, where("role", "==", USER_ROLES.ADMIN));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error("Error checking admin existence:", error);
+    throw error;
+  }
+};
+
+export const createNewUserCollection = async (
+  user,
+  role = USER_ROLES.AGENT
+) => {
+  try {
+    // Validate role
+    if (typeof role !== "string" || !Object.values(USER_ROLES).includes(role)) {
+      throw new Error("Invalid role specified");
     }
 
-    await addDoc(collection(userDocRef, `${item}`), {
-      title: `My ${item}`,
-      body: `Welcome to your ${item}!`,
-    });
-  } catch (error) {
-    console.error(`Error creating ${item}:`, error);
-  }
-};
+    // If creating admin, check if admin exists
+    if (role === USER_ROLES.ADMIN) {
+      const adminExists = await checkAdminExists();
+      if (adminExists) {
+        throw new Error("Admin already exists");
+      }
+    }
 
-// this function needs to only run the very first time the user registers
-// if it is ran again it will cause a DB error because the collections can't have the same uid
-// from here we can create all of the default data and collections we would like to add to each new user
-const createNewUserCollection = async (user) => {
-  try {
     await setDoc(
-      doc(getUsersCollection(), user.uid),
+      doc(collection(fireStore, "users"), user.uid),
       {
         name: "",
         email: user.email,
-        role: "admin",
-      },
-      { merge: true }
-    )
-      .then(() => setCurrentUser(user))
-      .then(() => {
-        model.forEach((item) => {
-          createUserModel(item);
-        });
-      });
-  } catch (error) {
-    console.error("Error creating user collection:", error);
-  }
-};
-
-// writing notes to our single user
-const setNote = async () => {
-  try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      console.error('No user document reference available');
-      return;
-    }
-
-    await addDoc(
-      collection(userDocRef, "notes"),
-      {
-        title: "title 2",
-        body: "stuff and things 2",
+        role: role,
+        createdAt: new Date().toISOString(),
+        active: true,
       },
       { merge: true }
     );
+
+    setCurrentUser(user, role);
   } catch (error) {
-    console.error("Error setting note:", error);
+    console.error("Error creating user collection:", error);
+    throw error;
   }
-};
-
-// getting all notes from our single user
-const getNotes = async () => {
-  try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      console.error('No user document reference available');
-      return [];
-    }
-
-    const notesCollection = collection(userDocRef, "notes");
-    const querySnapshot = await getDocs(notesCollection);
-    const notes = [];
-    querySnapshot.forEach((note) => {
-      notes.push({ id: note.id, ...note.data() });
-    });
-    return notes;
-  } catch (error) {
-    console.error("Error fetching notes:", error);
-    return [];
-  }
-};
-
-const getNotifications = async () => {
-  try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      console.error('No user document reference available');
-      return [];
-    }
-
-    const notificationsCollection = collection(userDocRef, "notifications");
-    const querySnapshot = await getDocs(notificationsCollection);
-    const notifications = [];
-    querySnapshot.forEach((notification) => {
-      notifications.push({ id: notification.id, ...notification.data() });
-    });
-    return notifications;
-  } catch (error) {
-    console.error("Error fetching notifications:", error);
-    return [];
-  }
-};
-
-export {
-  createNewUserCollection,
-  setCurrentUser,
-  setNote,
-  getNotes,
-  getNotifications,
 };
