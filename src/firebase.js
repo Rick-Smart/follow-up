@@ -7,6 +7,7 @@ import {
 } from "firebase/auth";
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "@firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const app = initializeApp({
   // apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -21,16 +22,17 @@ const app = initializeApp({
   projectId: "follow-up-792d6",
   storageBucket: "follow-up-792d6.firebasestorage.app",
   messagingSenderId: "774353739286",
-  appId: "1:774353739286:web:a2b1083d3779ad0b119f37"
+  appId: "1:774353739286:web:a2b1083d3779ad0b119f37",
 });
 
 const fireStore = getFirestore(app);
-
+const storage = getStorage(app);
 const auth = getAuth(app);
 
 export {
   auth,
   fireStore,
+  storage,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,

@@ -1,148 +1,124 @@
-import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    setDoc,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-  } from "firebase/firestore";
-  import { fireStore } from "../firebase";
-  
-  // Get the current user from localStorage
-  const getCurrentUser = () => {
-    return localStorage.getItem('currentUser');
-  };
-  
-  // Get reference to the current user's document
-  const getSingleUserDoc = () => {
-    const currentUser = getCurrentUser();
-    
-    if (!currentUser) {
-      console.error('No user is currently logged in');
-      return null;
-    }
-  
-    return doc(fireStore, "users", currentUser);
-  };
-  
-  // Get all notes for the current user
-  const getNotes = async () => {
+// notesController.js
+import BaseFirebaseController from "./baseController";
+import { doc, setDoc, where, deleteDoc, orderBy } from "firebase/firestore";
+import { fireStore } from "../firebase";
+
+class NotesController extends BaseFirebaseController {
+  constructor() {
+    super("notes");
+    // Set default sorting by updatedAt
+    this.baseQuery = [orderBy("updatedAt", "desc")];
+  }
+
+  async createNote(note) {
     try {
-      const userDocRef = getSingleUserDoc();
-      if (!userDocRef) {
-        throw new Error('No user document reference available');
-      }
-  
-      const notesCollection = collection(userDocRef, "notes");
-      const querySnapshot = await getDocs(notesCollection);
-      const notes = [];
-      
-      querySnapshot.forEach((note) => {
-        notes.push({
-          id: note.id,
-          ...note.data(),
-        });
+      const user = await this.validateUser();
+      const noteId = await this.createDoc(note, {
+        userId: user.uid,
       });
-      
-      return notes;
-    } catch (error) {
-      console.error("Error fetching notes:", error);
-      throw error;
-    }
-  };
-  
-  // Create a new note
-  const createNote = async (noteData) => {
-    try {
-      const userDocRef = getSingleUserDoc();
-      if (!userDocRef) {
-        throw new Error('No user document reference available');
-      }
-  
-      const docRef = await addDoc(collection(userDocRef, "notes"), {
-        title: noteData.title || "Untitled",
-        body: noteData.body,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-  
-      return docRef.id;
+
+      // Add reference to user's notes collection
+      const userNotesRef = doc(fireStore, `users/${user.uid}/notes/${noteId}`);
+      await setDoc(userNotesRef, { noteId });
+
+      return noteId;
     } catch (error) {
       console.error("Error creating note:", error);
       throw error;
     }
-  };
-  
-  // Update an existing note
-  const updateNote = async (noteId, noteData) => {
+  }
+
+  async getNotes() {
     try {
-      const userDocRef = getSingleUserDoc();
-      if (!userDocRef) {
-        throw new Error('No user document reference available');
+      const user = await this.validateUser();
+      const queryConstraints = [where("userId", "==", user.uid)];
+      const notes = await this.getAllDocs(queryConstraints);
+
+      return notes.map((note) => ({
+        ...note,
+        createdAt: note.createdAt?.toDate?.()?.toISOString() || null,
+        updatedAt: note.updatedAt?.toDate?.()?.toISOString() || null,
+      }));
+    } catch (error) {
+      console.error("Error getting notes:", error);
+      throw error;
+    }
+  }
+
+  async getNoteById(noteId) {
+    try {
+      const user = await this.validateUser();
+      const { data: noteData } = await this.getDoc(noteId);
+
+      if (noteData.userId !== user.uid) {
+        throw new Error("Not authorized to view this note");
       }
-  
-      const noteRef = doc(collection(userDocRef, "notes"), noteId);
-      await updateDoc(noteRef, {
+
+      return {
+        id: noteId,
         ...noteData,
-        updatedAt: new Date().toISOString(),
-      });
-  
-      return true;
+        createdAt: noteData.createdAt?.toDate?.()?.toISOString() || null,
+        updatedAt: noteData.updatedAt?.toDate?.()?.toISOString() || null,
+      };
+    } catch (error) {
+      console.error("Error getting note:", error);
+      throw error;
+    }
+  }
+
+  async updateNote(noteId, updatedData) {
+    try {
+      const user = await this.validateUser();
+      const { data: noteData } = await this.getDoc(noteId);
+
+      if (noteData.userId !== user.uid) {
+        throw new Error("Not authorized to update this note");
+      }
+
+      return await this.updateDoc(noteId, updatedData);
     } catch (error) {
       console.error("Error updating note:", error);
       throw error;
     }
-  };
-  
-  // Delete a note
-  const deleteNote = async (noteId) => {
+  }
+
+  async deleteNote(noteId) {
     try {
-      const userDocRef = getSingleUserDoc();
-      if (!userDocRef) {
-        throw new Error('No user document reference available');
+      const user = await this.validateUser();
+      const { data: noteData } = await this.getDoc(noteId);
+
+      if (noteData.userId !== user.uid) {
+        throw new Error("Not authorized to delete this note");
       }
-  
-      const noteRef = doc(collection(userDocRef, "notes"), noteId);
-      await deleteDoc(noteRef);
-  
+
+      // Delete from main notes collection (using hard delete)
+      await this.deleteDoc(noteId, false);
+
+      // Delete from user's notes collection
+      const userNoteRef = doc(fireStore, `users/${user.uid}/notes/${noteId}`);
+      await deleteDoc(userNoteRef);
+
       return true;
     } catch (error) {
       console.error("Error deleting note:", error);
       throw error;
     }
-  };
-  
-  // Get a single note by ID
-  const getNoteById = async (noteId) => {
-    try {
-      const userDocRef = getSingleUserDoc();
-      if (!userDocRef) {
-        throw new Error('No user document reference available');
-      }
-  
-      const noteRef = doc(collection(userDocRef, "notes"), noteId);
-      const noteDoc = await getDoc(noteRef);
-  
-      if (!noteDoc.exists()) {
-        throw new Error('Note not found');
-      }
-  
-      return {
-        id: noteDoc.id,
-        ...noteDoc.data(),
-      };
-    } catch (error) {
-      console.error("Error fetching note:", error);
-      throw error;
-    }
-  };
-  
-  export {
-    getNotes,
-    createNote,
-    updateNote,
-    deleteNote,
-    getNoteById,
-  };
+  }
+}
+
+// Create singleton instance
+const notesController = new NotesController();
+
+// Export individual methods with proper binding
+export const createNote = (...args) =>
+  notesController.createNote.apply(notesController, args);
+export const getNotes = (...args) =>
+  notesController.getNotes.apply(notesController, args);
+export const getNoteById = (...args) =>
+  notesController.getNoteById.apply(notesController, args);
+export const updateNote = (...args) =>
+  notesController.updateNote.apply(notesController, args);
+export const deleteNote = (...args) =>
+  notesController.deleteNote.apply(notesController, args);
+
+export default notesController;

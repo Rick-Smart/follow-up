@@ -1,6 +1,6 @@
 import React from "react";
 
-import { useStateContext } from "../contexts/ContextProvider";
+import { useMenuContext } from "../contexts/MenuContext";
 
 const Button = ({
   icon,
@@ -12,7 +12,7 @@ const Button = ({
   borderRadius,
   width,
 }) => {
-  const { setIsClicked, initialState } = useStateContext();
+  const { setIsClicked, initialState } = useMenuContext();
 
   return (
     <button
