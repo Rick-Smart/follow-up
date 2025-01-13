@@ -86,50 +86,6 @@ const createNewUserCollection = async (user) => {
   }
 };
 
-// writing notes to our single user
-const setNote = async () => {
-  try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      console.error('No user document reference available');
-      return;
-    }
-
-    await addDoc(
-      collection(userDocRef, "notes"),
-      {
-        title: "title 2",
-        body: "stuff and things 2",
-      },
-      { merge: true }
-    );
-  } catch (error) {
-    console.error("Error setting note:", error);
-  }
-};
-
-// getting all notes from our single user
-const getNotes = async () => {
-  try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      console.error('No user document reference available');
-      return [];
-    }
-
-    const notesCollection = collection(userDocRef, "notes");
-    const querySnapshot = await getDocs(notesCollection);
-    const notes = [];
-    querySnapshot.forEach((note) => {
-      notes.push({ id: note.id, ...note.data() });
-    });
-    return notes;
-  } catch (error) {
-    console.error("Error fetching notes:", error);
-    return [];
-  }
-};
-
 const getNotifications = async () => {
   try {
     const userDocRef = getSingleUserDoc();
@@ -154,7 +110,5 @@ const getNotifications = async () => {
 export {
   createNewUserCollection,
   setCurrentUser,
-  setNote,
-  getNotes,
   getNotifications,
 };
