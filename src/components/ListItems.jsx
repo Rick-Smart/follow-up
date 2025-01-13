@@ -7,20 +7,12 @@ import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import { useMenuContext } from "../contexts/MenuContext";
-import { useScreenSizeContext } from "../contexts/ScreenSizeContext";
-
-import { NavLink } from "react-router-dom";
+import { useUserContext } from "../contexts/UserContext";
 
 function ListItems({ items }) {
-  const {
-    activeMenu,
-    setActiveMenu,
-    screenSize,
-    activeMain,
-    handleMainVisible,
-  } = useMenuContext();
-
-  const currentRole = localStorage.getItem("userRole");
+  const { activeMenu, handleMainVisible } = useMenuContext();
+  const { currentUser } = useUserContext();
+  const currentRole = currentUser?.role;
 
   const activeLink =
     "flex items-center gap-5 pl-4 rounded-lg text-white bg-gray-400 text-md m-2 cursor-pointer";

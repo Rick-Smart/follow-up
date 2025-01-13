@@ -1,27 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Header } from "../components";
-import TicketsCard from "../components/TicketsCard";
+import Ticket from "../components/Ticket"; // Updated to use new Ticket component
 import {
   createTicket,
-  getTickets,
+  getAllTickets,
   escalateTicket,
   closeTicket,
+  deleteTicket,
 } from "../utils/ticketsController";
 import Joi from "joi";
 import DOMPurify from "dompurify";
 
-// Helper function to calculate remaining time
-const getTimeRemaining = (dueDate) => {
-  const total = Date.parse(dueDate) - Date.parse(new Date());
-  const days = Math.floor(total / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
-  const minutes = Math.floor((total / 1000 / 60) % 60);
-  return { total, days, hours, minutes };
-};
-
 // Validation schema for tickets
 const ticketSchema = Joi.object({
-  complaint: Joi.number().required().min(10).label("INC Number"),
   incNumber: Joi.number().required().min(10).label("INC Number"),
   msisdn: Joi.number().required().min(10).label("MSISDN"),
   submittedBy: Joi.string().required().label("Submitted By"),
@@ -33,16 +24,10 @@ const Tickets = () => {
   const [filteredTickets, setFilteredTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [closeNote, setCloseNote] = useState("");
-  const [ticketToClose, setTicketToClose] = useState(null);
   const [showNewTicketForm, setShowNewTicketForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState("ticketNumber");
-  const [escalationNote, setEscalationNote] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [expandedTicket, setExpandedTicket] = useState(null);
+  const [searchField, setSearchField] = useState("incNumber");
   const [newTicket, setNewTicket] = useState({
-    complaint: "",
     incNumber: "",
     msisdn: "",
     submittedBy: "",
@@ -53,48 +38,35 @@ const Tickets = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const fetchedTickets = await getTickets();
+      const fetchedTickets = await getAllTickets();
       setTickets(fetchedTickets);
       setFilteredTickets(fetchedTickets);
     } catch (err) {
       setError("Failed to load tickets.");
+      console.error("Error loading tickets:", err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
-    if (isMounted) {
-      loadTickets();
-    }
-
-    return () => {
-      isMounted = false;
-    };
+    loadTickets();
   }, [loadTickets]);
 
   useEffect(() => {
-    let isMounted = true;
-
     const filterTickets = () => {
       if (!searchTerm) {
-        if (isMounted) setFilteredTickets(tickets);
+        setFilteredTickets(tickets);
         return;
       }
       const filtered = tickets.filter((ticket) => {
         const searchValue = String(ticket[searchField] || "").toLowerCase();
         return searchValue.includes(searchTerm.toLowerCase());
       });
-      if (isMounted) setFilteredTickets(filtered);
+      setFilteredTickets(filtered);
     };
 
     filterTickets();
-
-    return () => {
-      isMounted = false;
-    };
   }, [searchTerm, searchField, tickets]);
 
   const handleCreateTicket = async (e) => {
@@ -103,7 +75,6 @@ const Tickets = () => {
 
     // Sanitize inputs
     const sanitizedTicket = {
-      complaint: DOMPurify.sanitize(newTicket.complaint),
       incNumber: DOMPurify.sanitize(newTicket.incNumber),
       msisdn: DOMPurify.sanitize(newTicket.msisdn),
       submittedBy: DOMPurify.sanitize(newTicket.submittedBy),
@@ -123,7 +94,6 @@ const Tickets = () => {
       await loadTickets();
       setShowNewTicketForm(false);
       setNewTicket({
-        complaint: "",
         incNumber: "",
         msisdn: "",
         submittedBy: "",
@@ -131,43 +101,56 @@ const Tickets = () => {
       });
     } catch (err) {
       setError("Failed to create ticket.");
+      console.error("Error creating ticket:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCloseTicket = async (ticketId) => {
-    if (!closeNote) {
-      setError("Please add a closing note.");
-      return;
+  const handleEdit = async (ticket) => {
+    // Will implement edit functionality
+    console.log("Edit ticket:", ticket);
+  };
+
+  const handleDelete = async (ticketId) => {
+    if (window.confirm("Are you sure you want to delete this ticket?")) {
+      try {
+        setIsLoading(true);
+        await deleteTicket(ticketId);
+        await loadTickets();
+      } catch (err) {
+        setError("Failed to delete ticket.");
+        console.error("Error deleting ticket:", err);
+      } finally {
+        setIsLoading(false);
+      }
     }
+  };
+
+  const handleClose = async (ticketId) => {
     try {
-      await closeTicket(ticketId, closeNote);
-      setCloseNote("");
-      setTicketToClose(null);
+      setIsLoading(true);
+      await closeTicket(ticketId);
       await loadTickets();
     } catch (err) {
       setError("Failed to close ticket.");
+      console.error("Error closing ticket:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleEscalate = async (ticketId) => {
-    if (!escalationNote) {
-      setError("Please add a note before escalating.");
-      return;
-    }
     try {
-      await escalateTicket(ticketId, escalationNote);
-      setEscalationNote("");
-      setSelectedTicket(null);
+      setIsLoading(true);
+      await escalateTicket(ticketId);
       await loadTickets();
     } catch (err) {
       setError("Failed to escalate ticket.");
+      console.error("Error escalating ticket:", err);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleToggleExpand = (ticketId) => {
-    setExpandedTicket(expandedTicket === ticketId ? null : ticketId);
   };
 
   return (
@@ -181,11 +164,10 @@ const Tickets = () => {
           onChange={(e) => setSearchField(e.target.value)}
           className="p-2 border rounded"
         >
-          <option value="ticketNumber">Ticket Number</option>
-          <option value="complaintNumber">Complaint Number</option>
           <option value="incNumber">INC Number</option>
           <option value="msisdn">MSISDN</option>
           <option value="submittedBy">Submitted By</option>
+          <option value="description">Description</option>
         </select>
         <input
           type="text"
@@ -216,18 +198,6 @@ const Tickets = () => {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
-              id="complaint"
-              type="text"
-              placeholder="Complaint Number"
-              value={newTicket.complaint}
-              onChange={(e) =>
-                setNewTicket({ ...newTicket, complaint: e.target.value })
-              }
-              className="p-2 border rounded"
-              required
-            />
-            <input
-              id="inc_number"
               type="text"
               placeholder="INC Number"
               value={newTicket.incNumber}
@@ -238,7 +208,6 @@ const Tickets = () => {
               required
             />
             <input
-              id="msisdn"
               type="text"
               placeholder="MSISDN"
               value={newTicket.msisdn}
@@ -249,7 +218,6 @@ const Tickets = () => {
               required
             />
             <input
-              id="submitted_by"
               type="text"
               placeholder="Submitted By"
               value={newTicket.submittedBy}
@@ -260,7 +228,6 @@ const Tickets = () => {
               required
             />
             <textarea
-              id="description"
               placeholder="Description"
               value={newTicket.description}
               onChange={(e) =>
@@ -273,7 +240,7 @@ const Tickets = () => {
           </div>
           <button
             type="submit"
-            className="mt-4 px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            className="mt-4 px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
             disabled={isLoading}
           >
             Create Ticket
@@ -283,50 +250,26 @@ const Tickets = () => {
 
       {isLoading ? (
         <div className="flex justify-center items-center h-32">
-          <div className="text-gray-600">Loading...</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {filteredTickets.map((ticket) => {
-            const timeRemaining = getTimeRemaining(ticket.dueDate);
-            const ticketData = {
-              title: `Ticket: ${ticket.ticketNumber}`,
-              description: ticket.description,
-              escalationLevel: `Level ${ticket.escalationLevel}`,
-              details: {
-                complaint: ticket.complaint,
-                incNumber: ticket.incNumber,
-                msisdn: ticket.msisdn,
-                submittedBy: ticket.submittedBy,
-                state: ticket.state,
-                createdAt: new Date(ticket.createdAt).toLocaleString(),
-                closedAt: ticket.closedAt
-                  ? new Date(ticket.closedAt).toLocaleString()
-                  : null,
-                timeRemaining: `${timeRemaining.days}d ${timeRemaining.hours}h ${timeRemaining.minutes}m`,
-                notes: ticket.notes || [],
-              },
-            };
-
-            return (
-              <TicketsCard
-                key={ticket.id}
-                ticket={ticketData}
-                onClose={() => setTicketToClose(ticket.id)}
-                onEscalate={() => setSelectedTicket(ticket.id)}
-                isClosing={ticketToClose === ticket.id}
-                isEscalating={selectedTicket === ticket.id}
-                closeNote={closeNote}
-                onCloseNoteChange={setCloseNote}
-                onConfirmClose={() => handleCloseTicket(ticket.id)}
-                escalationNote={escalationNote}
-                onEscalationNoteChange={setEscalationNote}
-                onConfirmEscalate={() => handleEscalate(ticket.id)}
-                isExpanded={expandedTicket === ticket.id}
-                onToggleExpand={() => handleToggleExpand(ticket.id)}
-              />
-            );
-          })}
+          {filteredTickets.map((ticket) => (
+            <Ticket
+              key={ticket.id}
+              ticket={ticket}
+              onEdit={() => handleEdit(ticket)}
+              onDelete={() => handleDelete(ticket.id)}
+              onClose={() => handleClose(ticket.id)}
+              onEscalate={() => handleEscalate(ticket.id)}
+              isLoading={isLoading}
+            />
+          ))}
+          {filteredTickets.length === 0 && (
+            <div className="text-center text-gray-500 py-8">
+              No tickets found
+            </div>
+          )}
         </div>
       )}
     </div>

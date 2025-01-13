@@ -95,6 +95,7 @@ export const links = [
           USER_ROLES.DIRECTOR,
           USER_ROLES.SR_OPERATIONS_MANAGER,
           USER_ROLES.OPERATIONS_MANAGER,
+          USER_ROLES.HR,
         ],
       },
     ],

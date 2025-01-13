@@ -3,76 +3,47 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   addDoc,
   updateDoc,
-  deleteDoc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
 } from "firebase/firestore";
 import { fireStore } from "../firebase";
+import { getCurrentUser } from "./authController";
 
-const getCurrentUser = () => {
-  return localStorage.getItem("currentUser");
-};
-
-const getSingleUserDoc = () => {
-  const currentUser = getCurrentUser();
-
-  if (!currentUser) {
-    console.error("No user is currently logged in");
-    return null;
-  }
-
-  return doc(fireStore, "users", currentUser);
-};
-
-const generateTicketNumber = () => {
-  return `TKT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-};
-
-const createTicket = async (ticketData) => {
+// Get all tickets with optional filters
+export const getAllTickets = async (filters = {}) => {
   try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      throw new Error("No user document reference available");
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
     }
 
-    const newTicket = {
-      ticketNumber: generateTicketNumber(),
-      incNumber: ticketData.incNumber,
-      msisdn: ticketData.msisdn,
-      submittedBy: ticketData.submittedBy,
-      description: ticketData.description,
-      state: "In Progress",
-      escalationLevel: 1,
-      createdAt: new Date().toISOString(),
-      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
-      notes: [],
-      ...ticketData,
-    };
+    const ticketsRef = collection(fireStore, "tickets");
+    const queryConstraints = [];
 
-    const docRef = await addDoc(collection(userDocRef, "tickets"), newTicket);
-    return docRef.id;
-  } catch (error) {
-    console.error("Error creating ticket:", error);
-    throw error;
-  }
-};
+    // Add filters if provided
+    if (filters.status)
+      queryConstraints.push(where("status", "==", filters.status));
+    if (filters.priority)
+      queryConstraints.push(where("priority", "==", filters.priority));
+    if (filters.userId)
+      queryConstraints.push(where("userId", "==", filters.userId));
 
-const getTickets = async () => {
-  try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      throw new Error("No user document reference available");
-    }
+    // Add default sorting by creation date
+    queryConstraints.push(orderBy("createdAt", "desc"));
 
-    const ticketsCollection = collection(userDocRef, "tickets");
-    const querySnapshot = await getDocs(ticketsCollection);
+    // Create and execute query
+    const q = query(ticketsRef, ...queryConstraints);
+    const querySnapshot = await getDocs(q);
+
     const tickets = [];
-
-    querySnapshot.forEach((ticket) => {
+    querySnapshot.forEach((doc) => {
       tickets.push({
-        id: ticket.id,
-        ...ticket.data(),
+        id: doc.id,
+        ...doc.data(),
       });
     });
 
@@ -83,99 +54,152 @@ const getTickets = async () => {
   }
 };
 
-const addNoteToTicket = async (ticketId, note) => {
+// Get ticket by ID
+export const getTicketById = async (ticketId) => {
   try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      throw new Error("No user document reference available");
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
     }
 
-    const ticketRef = doc(collection(userDocRef, "tickets"), ticketId);
-    const ticketDoc = await getDoc(ticketRef);
-    const currentNotes = ticketDoc.data().notes || [];
+    const ticketDoc = await getDoc(doc(fireStore, "tickets", ticketId));
+    if (!ticketDoc.exists()) {
+      throw new Error("Ticket not found");
+    }
 
-    const newNote = {
-      id: Date.now().toString(),
-      content: note,
-      createdAt: new Date().toISOString(),
-      createdBy: localStorage.getItem("currentUser"),
-      escalationLevel: ticketDoc.data().escalationLevel,
+    return { id: ticketDoc.id, ...ticketDoc.data() };
+  } catch (error) {
+    console.error("Error fetching ticket:", error);
+    throw error;
+  }
+};
+
+// Create a new ticket
+export const createTicket = async (ticketData) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    // Use regular timestamp for history array
+    const now = new Date();
+
+    const ticketWithMetadata = {
+      ...ticketData,
+      userId: user.uid,
+      createdBy: {
+        uid: user.uid,
+        email: user.email,
+        role: user.role,
+      },
+      status: "open",
+      priority: ticketData.priority || "normal",
+      escalationLevel: 1, // Initialize at level 1
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      history: [
+        {
+          action: "created",
+          timestamp: now.toISOString(),
+          user: user.email,
+          escalationLevel: 1,
+        },
+      ],
     };
 
-    await updateDoc(ticketRef, {
-      notes: [...currentNotes, newNote],
-    });
-
-    return true;
+    const docRef = await addDoc(
+      collection(fireStore, "tickets"),
+      ticketWithMetadata
+    );
+    return docRef.id;
   } catch (error) {
-    console.error("Error adding note:", error);
+    console.error("Error creating ticket:", error);
     throw error;
   }
 };
 
-const escalateTicket = async (ticketId, note) => {
+// Update a ticket
+export const updateTicket = async (ticketId, updatedData) => {
   try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      throw new Error("No user document reference available");
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
     }
 
-    const ticketRef = doc(collection(userDocRef, "tickets"), ticketId);
+    const ticketRef = doc(fireStore, "tickets", ticketId);
     const ticketDoc = await getDoc(ticketRef);
-    const currentLevel = ticketDoc.data().escalationLevel;
 
-    if (currentLevel < 5) {
-      await updateDoc(ticketRef, {
-        escalationLevel: currentLevel + 1,
-        lastEscalatedAt: new Date().toISOString(),
-      });
-
-      // Add escalation note
-      await addNoteToTicket(ticketId, note);
+    if (!ticketDoc.exists()) {
+      throw new Error("Ticket not found");
     }
 
+    const now = new Date();
+    const currentHistory = ticketDoc.data().history || [];
+
+    const updateData = {
+      ...updatedData,
+      updatedAt: serverTimestamp(),
+      updatedBy: {
+        uid: user.uid,
+        email: user.email,
+        role: user.role,
+      },
+      history: [
+        ...currentHistory,
+        {
+          action: "updated",
+          timestamp: now.toISOString(),
+          user: user.email,
+          changes: Object.keys(updatedData).join(", "),
+        },
+      ],
+    };
+
+    await updateDoc(ticketRef, updateData);
     return true;
   } catch (error) {
-    console.error("Error escalating ticket:", error);
+    console.error("Error updating ticket:", error);
     throw error;
   }
 };
 
-const deleteTicket = async (ticketId) => {
+// Close a ticket
+export const closeTicket = async (ticketId) => {
   try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      throw new Error("No user document reference available");
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
     }
 
-    const ticketRef = doc(collection(userDocRef, "tickets"), ticketId);
-    await deleteDoc(ticketRef);
+    const ticketRef = doc(fireStore, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
 
-    return true;
-  } catch (error) {
-    console.error("Error deleting ticket:", error);
-    throw error;
-  }
-};
-
-const closeTicket = async (ticketId, note) => {
-  try {
-    const userDocRef = getSingleUserDoc();
-    if (!userDocRef) {
-      throw new Error("No user document reference available");
+    if (!ticketDoc.exists()) {
+      throw new Error("Ticket not found");
     }
 
-    const ticketRef = doc(collection(userDocRef, "tickets"), ticketId);
+    const now = new Date();
+    const currentHistory = ticketDoc.data().history || [];
+
     await updateDoc(ticketRef, {
-      state: "Closed",
-      closedAt: new Date().toISOString(),
+      status: "closed",
+      updatedAt: serverTimestamp(),
+      closedAt: serverTimestamp(),
+      closedBy: {
+        uid: user.uid,
+        email: user.email,
+        role: user.role,
+      },
+      history: [
+        ...currentHistory,
+        {
+          action: "closed",
+          timestamp: now.toISOString(),
+          user: user.email,
+        },
+      ],
     });
-
-    // Add closing note
-    if (note) {
-      await addNoteToTicket(ticketId, `Ticket closed: ${note}`);
-    }
-
     return true;
   } catch (error) {
     console.error("Error closing ticket:", error);
@@ -183,11 +207,98 @@ const closeTicket = async (ticketId, note) => {
   }
 };
 
-export {
-  closeTicket,
-  createTicket,
-  getTickets,
-  escalateTicket,
-  deleteTicket,
-  addNoteToTicket,
+// Escalate a ticket
+export const escalateTicket = async (ticketId) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const ticketRef = doc(fireStore, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+
+    if (!ticketDoc.exists()) {
+      throw new Error("Ticket not found");
+    }
+
+    const ticketData = ticketDoc.data();
+    const currentLevel = ticketData.escalationLevel || 1;
+
+    if (currentLevel >= 5) {
+      throw new Error("Ticket is already at maximum escalation level");
+    }
+
+    const now = new Date();
+    const currentHistory = ticketData.history || [];
+
+    await updateDoc(ticketRef, {
+      escalationLevel: currentLevel + 1,
+      priority: currentLevel + 1 >= 4 ? "high" : ticketData.priority,
+      updatedAt: serverTimestamp(),
+      escalatedAt: serverTimestamp(),
+      escalatedBy: {
+        uid: user.uid,
+        email: user.email,
+        role: user.role,
+      },
+      history: [
+        ...currentHistory,
+        {
+          action: "escalated",
+          timestamp: now.toISOString(),
+          user: user.email,
+          fromLevel: currentLevel,
+          toLevel: currentLevel + 1,
+        },
+      ],
+    });
+    return true;
+  } catch (error) {
+    console.error("Error escalating ticket:", error);
+    throw error;
+  }
+};
+
+// Delete a ticket (soft delete)
+export const deleteTicket = async (ticketId) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const ticketRef = doc(fireStore, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+
+    if (!ticketDoc.exists()) {
+      throw new Error("Ticket not found");
+    }
+
+    const now = new Date();
+    const currentHistory = ticketDoc.data().history || [];
+
+    await updateDoc(ticketRef, {
+      status: "deleted",
+      updatedAt: serverTimestamp(),
+      deletedAt: serverTimestamp(),
+      deletedBy: {
+        uid: user.uid,
+        email: user.email,
+        role: user.role,
+      },
+      history: [
+        ...currentHistory,
+        {
+          action: "deleted",
+          timestamp: now.toISOString(),
+          user: user.email,
+        },
+      ],
+    });
+    return true;
+  } catch (error) {
+    console.error("Error deleting ticket:", error);
+    throw error;
+  }
 };

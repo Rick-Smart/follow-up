@@ -1,44 +1,39 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Login, Register, Dashboard } from "./pages";
 import { useUserContext } from "./contexts/UserContext";
+import { useAuthContext } from "./contexts/authContext";
+import { onAuthStateChangedListener } from "./utils/authController";
 import "./App.css";
 
-// ProtectedRoute component to handle authentication
+const LoadingSpinner = () => (
+  <div className="flex justify-center items-center h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+  </div>
+);
+
 const ProtectedRoute = ({ children }) => {
   const { currentUser, isLoading } = useUserContext();
 
-  // Show loading state while checking authentication
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  // Redirect to login if not authenticated
-  if (!currentUser) {
+  if (!currentUser?.isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
   return children;
 };
 
-// PublicRoute component for non-authenticated routes
 const PublicRoute = ({ children }) => {
   const { currentUser, isLoading } = useUserContext();
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  // Redirect to dashboard if already authenticated
-  if (currentUser) {
+  if (currentUser?.isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -46,10 +41,37 @@ const PublicRoute = ({ children }) => {
 };
 
 const App = () => {
+  const { updateUser, setIsLoading } = useUserContext();
+
+  useEffect(() => {
+    let unsubscribe;
+    const setupAuthListener = async () => {
+      console.log("Setting up auth listener");
+      setIsLoading(true);
+
+      unsubscribe = onAuthStateChangedListener((user) => {
+        if (user) {
+          updateUser(user);
+        } else {
+          updateUser(null);
+        }
+        setIsLoading(false);
+      });
+    };
+
+    setupAuthListener();
+
+    return () => {
+      console.log("Cleaning up auth listener");
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []); // Empty dependency array
+
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
         <Route
           path="/"
           element={
@@ -66,8 +88,6 @@ const App = () => {
             </PublicRoute>
           }
         />
-
-        {/* Protected Routes */}
         <Route
           path="/dashboard/*"
           element={
@@ -76,8 +96,6 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-
-        {/* Catch all route for undefined paths */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
