@@ -1,204 +1,157 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  updateDoc,
-  query,
-  where,
-  deleteDoc,
-} from "firebase/firestore";
-import { fireStore } from "../firebase";
-import { getCurrentUser } from "./authController";
+// userManagementController.js
+import BaseFirebaseController from "./baseController";
+import { query, where } from "firebase/firestore";
+import { USER_ROLES } from "./userController";
 
-// Get all users with their details
-export const getAllUsers = async () => {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || !["admin", "supervisor"].includes(currentUser.role)) {
-      throw new Error("Not authorized to view users");
-    }
-
-    const usersRef = collection(fireStore, "users");
-    const querySnapshot = await getDocs(usersRef);
-
-    const users = [];
-    querySnapshot.forEach((doc) => {
-      users.push({ id: doc.id, ...doc.data() });
-    });
-
-    return users;
-  } catch (error) {
-    console.error("Error getting users:", error);
-    throw error;
+class UserManagementController extends BaseFirebaseController {
+  constructor() {
+    super("users");
+    this.adminRoles = ["admin", "supervisor"];
   }
-};
 
-// Get a single user by ID
-export const getUserById = async (userId) => {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error("Not authenticated");
+  async getAllUsers() {
+    try {
+      const user = await this.validateUser(this.adminRoles);
+      return await this.getAllDocs();
+    } catch (error) {
+      console.error("Error getting users:", error);
+      throw error;
     }
-
-    const userRef = doc(fireStore, "users", userId);
-    const userDoc = await getDoc(userRef);
-
-    if (!userDoc.exists()) {
-      return null;
-    }
-
-    const userData = userDoc.data();
-    // Only allow admins, supervisors, or the user themselves to view details
-    if (
-      !["admin", "supervisor"].includes(currentUser.role) &&
-      currentUser.uid !== userId
-    ) {
-      throw new Error("Not authorized to view this user");
-    }
-
-    return { id: userDoc.id, ...userData };
-  } catch (error) {
-    console.error("Error getting user:", error);
-    throw error;
   }
-};
 
-// Update user attributes
-export const updateUserAttributes = async (userId, attributes) => {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || !["admin", "supervisor"].includes(currentUser.role)) {
-      throw new Error("Not authorized to update users");
+  async getUserById(userId) {
+    try {
+      const currentUser = await this.validateUser();
+      const { data: userData } = await this.getDoc(userId);
+
+      // Only allow admins, supervisors, or the user themselves to view details
+      if (
+        !this.adminRoles.includes(currentUser.role) &&
+        currentUser.uid !== userId
+      ) {
+        throw new Error("Not authorized to view this user");
+      }
+
+      return {
+        id: userId,
+        ...userData,
+      };
+    } catch (error) {
+      console.error("Error getting user:", error);
+      throw error;
     }
-
-    const userRef = doc(fireStore, "users", userId);
-    await updateDoc(userRef, {
-      ...attributes,
-      updatedAt: new Date().toISOString(),
-      updatedBy: currentUser.uid,
-    });
-  } catch (error) {
-    console.error("Error updating user:", error);
-    throw error;
   }
-};
 
-// Set/update supervisor relationship
-export const setSupervisor = async (userId, supervisorId) => {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || !["admin"].includes(currentUser.role)) {
-      throw new Error("Not authorized to set supervisors");
+  async updateUserAttributes(userId, attributes) {
+    try {
+      const user = await this.validateUser(this.adminRoles);
+      return await this.updateDoc(userId, attributes);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      throw error;
     }
-
-    const userRef = doc(fireStore, "users", userId);
-    await updateDoc(userRef, {
-      supervisorId,
-      updatedAt: new Date().toISOString(),
-      updatedBy: currentUser.uid,
-    });
-  } catch (error) {
-    console.error("Error setting supervisor:", error);
-    throw error;
   }
-};
 
-// Delete a user (soft delete)
-export const deleteUser = async (userId) => {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser || !["admin"].includes(currentUser.role)) {
-      throw new Error("Not authorized to delete users");
+  async setSupervisor(userId, supervisorId) {
+    try {
+      const user = await this.validateUser(["admin"]);
+      return await this.updateDoc(userId, {
+        supervisorId,
+      });
+    } catch (error) {
+      console.error("Error setting supervisor:", error);
+      throw error;
     }
-
-    const userRef = doc(fireStore, "users", userId);
-    await updateDoc(userRef, {
-      active: false,
-      deactivatedAt: new Date().toISOString(),
-      deactivatedBy: currentUser.uid,
-    });
-  } catch (error) {
-    console.error("Error deleting user:", error);
-    throw error;
   }
-};
 
-// Get users by role(s)
-export const getUsersByRole = async (roles) => {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error("Not authenticated");
+  async getUsersByRole(roles) {
+    try {
+      const user = await this.validateUser(this.adminRoles);
+
+      if (!roles || !Array.isArray(roles) || roles.length === 0) {
+        console.error("Invalid roles parameter:", roles);
+        return [];
+      }
+
+      const queryConstraints = [
+        where("role", "in", roles),
+        where("active", "==", true),
+      ];
+
+      return await this.getAllDocs(queryConstraints);
+    } catch (error) {
+      console.error("Error getting users by role:", error);
+      throw error;
     }
-
-    // Validate roles parameter
-    if (!roles || !Array.isArray(roles) || roles.length === 0) {
-      console.error("Invalid roles parameter:", roles);
-      return [];
-    }
-
-    // Only allow admins and supervisors to query by role
-    if (!["admin", "supervisor"].includes(currentUser.role)) {
-      throw new Error("Not authorized to query users by role");
-    }
-
-    const usersRef = collection(fireStore, "users");
-    const q = query(
-      usersRef,
-      where("role", "in", roles),
-      where("active", "==", true)
-    );
-
-    const querySnapshot = await getDocs(q);
-    const users = [];
-
-    querySnapshot.forEach((doc) => {
-      users.push({ id: doc.id, ...doc.data() });
-    });
-
-    return users;
-  } catch (error) {
-    console.error("Error getting users by role:", error);
-    throw error;
   }
-};
 
-// Get supervisor hierarchy
-export const getSupervisorHierarchy = async (userId) => {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      throw new Error("Not authenticated");
+  async getSupervisorHierarchy(userId) {
+    try {
+      const currentUser = await this.validateUser();
+
+      // Only allow viewing hierarchy if admin, supervisor, or the user themselves
+      if (
+        !this.adminRoles.includes(currentUser.role) &&
+        currentUser.uid !== userId
+      ) {
+        throw new Error("Not authorized to view hierarchy");
+      }
+
+      const hierarchy = [];
+      let currentUserId = userId;
+      const maxDepth = 10; // Prevent infinite loops
+      let depth = 0;
+
+      while (currentUserId && depth < maxDepth) {
+        const userData = await this.getUserById(currentUserId);
+        if (!userData) break;
+
+        hierarchy.push(userData);
+        currentUserId = userData.supervisorId;
+        depth++;
+      }
+
+      return hierarchy;
+    } catch (error) {
+      console.error("Error getting supervisor hierarchy:", error);
+      throw error;
     }
-
-    // Only allow viewing hierarchy if admin, supervisor, or the user themselves
-    if (
-      !["admin", "supervisor"].includes(currentUser.role) &&
-      currentUser.uid !== userId
-    ) {
-      throw new Error("Not authorized to view hierarchy");
-    }
-
-    const hierarchy = [];
-    let currentUserId = userId;
-    const maxDepth = 10; // Prevent infinite loops
-    let depth = 0;
-
-    while (currentUserId && depth < maxDepth) {
-      const user = await getUserById(currentUserId);
-      if (!user) break;
-
-      hierarchy.push(user);
-      currentUserId = user.supervisorId;
-      depth++;
-    }
-
-    return hierarchy;
-  } catch (error) {
-    console.error("Error getting supervisor hierarchy:", error);
-    throw error;
   }
-};
+
+  async deleteUser(userId) {
+    try {
+      await this.validateUser(["admin"]);
+      return await this.deleteDoc(userId, true); // true for soft delete
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      throw error;
+    }
+  }
+}
+
+// Create singleton instance
+const userManagementController = new UserManagementController();
+
+// Export individual methods with proper binding
+export const getAllUsers = (...args) =>
+  userManagementController.getAllUsers.apply(userManagementController, args);
+export const getUserById = (...args) =>
+  userManagementController.getUserById.apply(userManagementController, args);
+export const updateUserAttributes = (...args) =>
+  userManagementController.updateUserAttributes.apply(
+    userManagementController,
+    args
+  );
+export const setSupervisor = (...args) =>
+  userManagementController.setSupervisor.apply(userManagementController, args);
+export const getUsersByRole = (...args) =>
+  userManagementController.getUsersByRole.apply(userManagementController, args);
+export const getSupervisorHierarchy = (...args) =>
+  userManagementController.getSupervisorHierarchy.apply(
+    userManagementController,
+    args
+  );
+export const deleteUser = (...args) =>
+  userManagementController.deleteUser.apply(userManagementController, args);
+
+export default userManagementController;

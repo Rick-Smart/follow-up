@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Login, Register, Dashboard } from "./pages";
 import { useUserContext } from "./contexts/UserContext";
-import { useAuthContext } from "./contexts/authContext";
 import { onAuthStateChangedListener } from "./utils/authController";
 import "./App.css";
 
@@ -67,7 +66,7 @@ const App = () => {
         unsubscribe();
       }
     };
-  }, []); // Empty dependency array
+  }, []);
 
   return (
     <BrowserRouter>

@@ -1,5 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
+import { MessageCircle, Users, Edit } from "lucide-react";
 
 const Ticket = ({
   ticket,
@@ -7,7 +8,10 @@ const Ticket = ({
   onDelete,
   onClose,
   onEscalate,
-  isLoading,
+  onAssign,
+  onAddComment,
+  isLoading = false,
+  canAssignTickets = false,
 }) => {
   // Helper function to determine status badge color
   const getStatusColor = (status) => {
@@ -59,9 +63,21 @@ const Ticket = ({
     }
   };
 
+  // Function to format timestamp
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "N/A";
+    try {
+      return timestamp.toDate
+        ? timestamp.toDate().toLocaleString()
+        : new Date(timestamp).toLocaleString();
+    } catch {
+      return timestamp;
+    }
+  };
+
   return (
     <div
-      className={`bg-white p-4 rounded-lg shadow hover:shadow-md transition-all border-2 ${getEscalationColor(
+      className={`relative bg-white p-4 rounded-lg shadow hover:shadow-md transition-all border-2 ${getEscalationColor(
         ticket.escalationLevel
       )}`}
     >
@@ -102,28 +118,58 @@ const Ticket = ({
         <p className="text-sm text-gray-600">
           <span className="font-medium">Description:</span> {ticket.description}
         </p>
+
         {ticket.createdAt && (
           <p className="text-sm text-gray-600">
             <span className="font-medium">Created:</span>{" "}
-            {new Date(ticket.createdAt.toDate()).toLocaleString()}
+            {formatTimestamp(ticket.createdAt)}
           </p>
         )}
+
         {ticket.priority && (
           <p className="text-sm text-gray-600">
             <span className="font-medium">Priority:</span> {ticket.priority}
           </p>
         )}
+
+        {/* Assigned To Information */}
+        {ticket.assignedTo && (
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Assigned to:</span>{" "}
+            {ticket.assignedTo.name || "Unknown User"}
+          </p>
+        )}
       </div>
+
+      {/* Comments Section */}
+      {ticket.comments && ticket.comments.length > 0 && (
+        <div className="border-t pt-4 mt-4">
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">
+            Comments ({ticket.comments.length})
+          </h4>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {ticket.comments.slice(-3).map((comment) => (
+              <div key={comment.id} className="bg-gray-50 p-2 rounded text-sm">
+                <p>{comment.text}</p>
+                <p className="text-xs text-gray-500">
+                  - {comment.createdBy.email} on{" "}
+                  {formatTimestamp(comment.createdAt)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex justify-between items-center pt-4 border-t">
-        <div className="space-x-2">
+        <div className="space-x-2 flex items-center">
           <button
-            onClick={() => onEdit(ticket)}
+            onClick={onEdit}
             disabled={isLoading}
-            className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 disabled:opacity-50"
+            className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 disabled:opacity-50 flex items-center"
           >
-            Edit
+            <Edit size={16} className="mr-1" /> Edit
           </button>
           <button
             onClick={() => onEscalate(ticket.id)}
@@ -136,8 +182,24 @@ const Ticket = ({
           >
             Escalate
           </button>
+          <button
+            onClick={onAddComment}
+            disabled={isLoading}
+            className="px-3 py-1 text-sm bg-green-50 text-green-600 rounded hover:bg-green-100 disabled:opacity-50 flex items-center"
+          >
+            <MessageCircle size={16} className="mr-1" /> Comment
+          </button>
         </div>
-        <div className="space-x-2">
+        <div className="space-x-2 flex items-center">
+          <button
+            onClick={onAssign}
+            disabled={
+              isLoading || ticket.status === "closed" || !canAssignTickets
+            }
+            className="px-3 py-1 text-sm bg-purple-50 text-purple-600 rounded hover:bg-purple-100 disabled:opacity-50 flex items-center"
+          >
+            <Users size={16} className="mr-1" /> Assign
+          </button>
           <button
             onClick={() => onClose(ticket.id)}
             disabled={isLoading || ticket.status === "closed"}
@@ -169,12 +231,35 @@ Ticket.propTypes = {
     priority: PropTypes.string,
     escalationLevel: PropTypes.number,
     createdAt: PropTypes.object, // Firestore Timestamp
+    assignedTo: PropTypes.shape({
+      uid: PropTypes.string,
+      email: PropTypes.string,
+      assignedAt: PropTypes.object,
+    }),
+    comments: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        text: PropTypes.string.isRequired,
+        createdAt: PropTypes.string.isRequired,
+        createdBy: PropTypes.shape({
+          email: PropTypes.string.isRequired,
+        }).isRequired,
+      })
+    ),
   }).isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
   onEscalate: PropTypes.func.isRequired,
+  onAssign: PropTypes.func.isRequired,
+  onAddComment: PropTypes.func.isRequired,
   isLoading: PropTypes.bool,
+  canAssignTickets: PropTypes.bool,
+};
+
+Ticket.defaultProps = {
+  isLoading: false,
+  canAssignTickets: false,
 };
 
 export default Ticket;
