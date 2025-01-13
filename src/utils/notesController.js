@@ -1,190 +1,124 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  addDoc,
-  updateDoc,
-  query,
-  where,
-  deleteDoc,
-  orderBy,
-  serverTimestamp,
-} from "firebase/firestore";
+// notesController.js
+import BaseFirebaseController from "./baseController";
+import { doc, setDoc, where, deleteDoc, orderBy } from "firebase/firestore";
 import { fireStore } from "../firebase";
-import { getCurrentUser } from "./authController";
 
-// Create a new note
-export const createNote = async (note) => {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
-    // Add note to notes collection
-    const notesRef = collection(fireStore, "notes");
-    const timestamp = serverTimestamp();
-    const newNote = {
-      ...note,
-      userId: user.uid,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      createdBy: {
-        uid: user.uid,
-        email: user.email,
-        role: user.role,
-      },
-    };
-
-    const docRef = await addDoc(notesRef, newNote);
-
-    // Add reference to user's notes collection
-    const userNotesRef = doc(fireStore, `users/${user.uid}/notes/${docRef.id}`);
-    await setDoc(userNotesRef, { noteId: docRef.id });
-
-    return docRef.id;
-  } catch (error) {
-    console.error("Error creating note:", error);
-    throw error;
+class NotesController extends BaseFirebaseController {
+  constructor() {
+    super("notes");
+    // Set default sorting by updatedAt
+    this.baseQuery = [orderBy("updatedAt", "desc")];
   }
-};
 
-// Get all notes for current user
-export const getNotes = async () => {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-
-    const notesRef = collection(fireStore, "notes");
-    const q = query(
-      notesRef,
-      where("userId", "==", user.uid),
-      orderBy("updatedAt", "desc")
-    );
-
-    const querySnapshot = await getDocs(q);
-    const notes = [];
-
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      notes.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,
+  async createNote(note) {
+    try {
+      const user = await this.validateUser();
+      const noteId = await this.createDoc(note, {
+        userId: user.uid,
       });
-    });
 
-    return notes;
-  } catch (error) {
-    console.error("Error getting notes:", error);
-    throw error;
+      // Add reference to user's notes collection
+      const userNotesRef = doc(fireStore, `users/${user.uid}/notes/${noteId}`);
+      await setDoc(userNotesRef, { noteId });
+
+      return noteId;
+    } catch (error) {
+      console.error("Error creating note:", error);
+      throw error;
+    }
   }
-};
 
-// Get a single note by ID
-export const getNoteById = async (noteId) => {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
+  async getNotes() {
+    try {
+      const user = await this.validateUser();
+      const queryConstraints = [where("userId", "==", user.uid)];
+      const notes = await this.getAllDocs(queryConstraints);
+
+      return notes.map((note) => ({
+        ...note,
+        createdAt: note.createdAt?.toDate?.()?.toISOString() || null,
+        updatedAt: note.updatedAt?.toDate?.()?.toISOString() || null,
+      }));
+    } catch (error) {
+      console.error("Error getting notes:", error);
+      throw error;
     }
-
-    const noteRef = doc(fireStore, "notes", noteId);
-    const noteDoc = await getDoc(noteRef);
-
-    if (!noteDoc.exists()) {
-      throw new Error("Note not found");
-    }
-
-    const noteData = noteDoc.data();
-    if (noteData.userId !== user.uid) {
-      throw new Error("Not authorized to view this note");
-    }
-
-    return {
-      id: noteDoc.id,
-      ...noteData,
-      createdAt: noteData.createdAt?.toDate?.()?.toISOString() || null,
-      updatedAt: noteData.updatedAt?.toDate?.()?.toISOString() || null,
-    };
-  } catch (error) {
-    console.error("Error getting note:", error);
-    throw error;
   }
-};
 
-// Update a note
-export const updateNote = async (noteId, updatedData) => {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
+  async getNoteById(noteId) {
+    try {
+      const user = await this.validateUser();
+      const { data: noteData } = await this.getDoc(noteId);
+
+      if (noteData.userId !== user.uid) {
+        throw new Error("Not authorized to view this note");
+      }
+
+      return {
+        id: noteId,
+        ...noteData,
+        createdAt: noteData.createdAt?.toDate?.()?.toISOString() || null,
+        updatedAt: noteData.updatedAt?.toDate?.()?.toISOString() || null,
+      };
+    } catch (error) {
+      console.error("Error getting note:", error);
+      throw error;
     }
-
-    const noteRef = doc(fireStore, "notes", noteId);
-    const noteDoc = await getDoc(noteRef);
-
-    if (!noteDoc.exists()) {
-      throw new Error("Note not found");
-    }
-
-    const noteData = noteDoc.data();
-    if (noteData.userId !== user.uid) {
-      throw new Error("Not authorized to update this note");
-    }
-
-    await updateDoc(noteRef, {
-      ...updatedData,
-      updatedAt: serverTimestamp(),
-      updatedBy: {
-        uid: user.uid,
-        email: user.email,
-        role: user.role,
-      },
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error updating note:", error);
-    throw error;
   }
-};
 
-// Delete a note
-export const deleteNote = async (noteId) => {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
+  async updateNote(noteId, updatedData) {
+    try {
+      const user = await this.validateUser();
+      const { data: noteData } = await this.getDoc(noteId);
+
+      if (noteData.userId !== user.uid) {
+        throw new Error("Not authorized to update this note");
+      }
+
+      return await this.updateDoc(noteId, updatedData);
+    } catch (error) {
+      console.error("Error updating note:", error);
+      throw error;
     }
-
-    const noteRef = doc(fireStore, "notes", noteId);
-    const noteDoc = await getDoc(noteRef);
-
-    if (!noteDoc.exists()) {
-      throw new Error("Note not found");
-    }
-
-    const noteData = noteDoc.data();
-    if (noteData.userId !== user.uid) {
-      throw new Error("Not authorized to delete this note");
-    }
-
-    // Delete from main notes collection
-    await deleteDoc(noteRef);
-
-    // Delete from user's notes collection
-    const userNoteRef = doc(fireStore, `users/${user.uid}/notes/${noteId}`);
-    await deleteDoc(userNoteRef);
-
-    return true;
-  } catch (error) {
-    console.error("Error deleting note:", error);
-    throw error;
   }
-};
+
+  async deleteNote(noteId) {
+    try {
+      const user = await this.validateUser();
+      const { data: noteData } = await this.getDoc(noteId);
+
+      if (noteData.userId !== user.uid) {
+        throw new Error("Not authorized to delete this note");
+      }
+
+      // Delete from main notes collection (using hard delete)
+      await this.deleteDoc(noteId, false);
+
+      // Delete from user's notes collection
+      const userNoteRef = doc(fireStore, `users/${user.uid}/notes/${noteId}`);
+      await deleteDoc(userNoteRef);
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      throw error;
+    }
+  }
+}
+
+// Create singleton instance
+const notesController = new NotesController();
+
+// Export individual methods with proper binding
+export const createNote = (...args) =>
+  notesController.createNote.apply(notesController, args);
+export const getNotes = (...args) =>
+  notesController.getNotes.apply(notesController, args);
+export const getNoteById = (...args) =>
+  notesController.getNoteById.apply(notesController, args);
+export const updateNote = (...args) =>
+  notesController.updateNote.apply(notesController, args);
+export const deleteNote = (...args) =>
+  notesController.deleteNote.apply(notesController, args);
+
+export default notesController;

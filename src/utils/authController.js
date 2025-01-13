@@ -22,6 +22,7 @@ export const getCurrentUser = async () => {
     return {
       uid: user.uid,
       email: user.email,
+      name: userData.name,
       role: userData.role,
       isAuthenticated: true,
     };
@@ -125,6 +126,7 @@ export const onAuthStateChangedListener = (callback) => {
 
           const userInfo = {
             uid: user.uid,
+            name: user.name,
             email: user.email,
             role: userData.role,
             isAuthenticated: true,

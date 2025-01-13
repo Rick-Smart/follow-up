@@ -15,6 +15,7 @@ import { sanitizeInputs, validateTicket } from "../utils/validationUtils";
 import { useUserContext } from "../contexts/UserContext";
 import { collection, getDocs } from "firebase/firestore";
 import { fireStore } from "../firebase";
+import { USER_ROLES } from "../utils/userController";
 
 const Tickets = () => {
   const [tickets, setTickets] = useState([]);
@@ -281,7 +282,13 @@ const Tickets = () => {
 
   // Determine if user can assign tickets (POD or higher)
   const canAssignTickets = () => {
-    const assignRoles = ["POD", "ADMIN", "MANAGER"];
+    const assignRoles = [
+      USER_ROLES.ADMIN,
+      USER_ROLES.DIRECTOR,
+      USER_ROLES.SR_OPERATIONS_MANAGER,
+      USER_ROLES.OPERATIONS_MANAGER,
+      USER_ROLES.COACH,
+    ];
     return currentUser && assignRoles.includes(currentUser.role);
   };
 

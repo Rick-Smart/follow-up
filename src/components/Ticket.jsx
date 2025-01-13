@@ -136,7 +136,7 @@ const Ticket = ({
         {ticket.assignedTo && (
           <p className="text-sm text-gray-600">
             <span className="font-medium">Assigned to:</span>{" "}
-            {ticket.assignedTo.email || "Unknown User"}
+            {ticket.assignedTo.name || "Unknown User"}
           </p>
         )}
       </div>
@@ -240,7 +240,7 @@ Ticket.propTypes = {
       PropTypes.shape({
         id: PropTypes.string.isRequired,
         text: PropTypes.string.isRequired,
-        createdAt: PropTypes.object.isRequired,
+        createdAt: PropTypes.string.isRequired,
         createdBy: PropTypes.shape({
           email: PropTypes.string.isRequired,
         }).isRequired,
