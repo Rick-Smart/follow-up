@@ -31,6 +31,10 @@ export const getAllTickets = async (filters = {}) => {
       queryConstraints.push(where("priority", "==", filters.priority));
     if (filters.userId)
       queryConstraints.push(where("userId", "==", filters.userId));
+    if (filters.assignedToUid)
+      queryConstraints.push(
+        where("assignedTo.uid", "==", filters.assignedToUid)
+      );
 
     // Add default sorting by creation date
     queryConstraints.push(orderBy("createdAt", "desc"));
@@ -106,6 +110,8 @@ export const createTicket = async (ticketData) => {
           escalationLevel: 1,
         },
       ],
+      comments: [], // Initialize comments array
+      assignedTo: null, // No initial assignment
     };
 
     const docRef = await addDoc(
@@ -160,6 +166,61 @@ export const updateTicket = async (ticketId, updatedData) => {
     return true;
   } catch (error) {
     console.error("Error updating ticket:", error);
+    throw error;
+  }
+};
+
+// Edit a ticket with enhanced permissions and tracking
+export const editTicket = async (ticketId, updatedTicketData) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    // Define allowed roles for editing tickets
+    const editRoles = ["ADMIN", "MANAGER", "POD"];
+    if (!editRoles.includes(user.role)) {
+      throw new Error("Insufficient permissions to edit tickets");
+    }
+
+    const ticketRef = doc(fireStore, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+
+    if (!ticketDoc.exists()) {
+      throw new Error("Ticket not found");
+    }
+
+    const now = new Date();
+    const currentTicketData = ticketDoc.data();
+    const currentHistory = currentTicketData.history || [];
+
+    // Prepare update data with tracked changes
+    const updateData = {
+      ...updatedTicketData,
+      updatedAt: serverTimestamp(),
+      updatedBy: {
+        uid: user.uid,
+        email: user.email,
+        role: user.role,
+      },
+      history: [
+        ...currentHistory,
+        {
+          action: "edited",
+          timestamp: now.toISOString(),
+          user: user.email,
+          changes: Object.keys(updatedTicketData).join(", "),
+        },
+      ],
+    };
+
+    // Update specific fields while preserving system-managed fields
+    await updateDoc(ticketRef, updateData);
+
+    return true;
+  } catch (error) {
+    console.error("Error editing ticket:", error);
     throw error;
   }
 };
@@ -299,6 +360,101 @@ export const deleteTicket = async (ticketId) => {
     return true;
   } catch (error) {
     console.error("Error deleting ticket:", error);
+    throw error;
+  }
+};
+
+// Assign a ticket to a user
+export const assignTicket = async (ticketId, assignedUserId) => {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error("User not authenticated");
+    }
+
+    // Check if current user has POD or higher role
+    const allowedRoles = ["POD", "ADMIN", "MANAGER"];
+    if (!allowedRoles.includes(currentUser.role)) {
+      throw new Error("Insufficient permissions to assign tickets");
+    }
+
+    const ticketRef = doc(fireStore, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+
+    if (!ticketDoc.exists()) {
+      throw new Error("Ticket not found");
+    }
+
+    const now = new Date();
+    const currentHistory = ticketDoc.data().history || [];
+
+    await updateDoc(ticketRef, {
+      assignedTo: {
+        uid: assignedUserId,
+        assignedAt: serverTimestamp(),
+        assignedBy: {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          role: currentUser.role,
+        },
+      },
+      updatedAt: serverTimestamp(),
+      history: [
+        ...currentHistory,
+        {
+          action: "assigned",
+          timestamp: now.toISOString(),
+          user: currentUser.email,
+          assignedToUser: assignedUserId,
+        },
+      ],
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error assigning ticket:", error);
+    throw error;
+  }
+};
+
+// Add a comment to a ticket
+export const addTicketComment = async (ticketId, commentText) => {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error("User not authenticated");
+    }
+
+    const ticketRef = doc(fireStore, "tickets", ticketId);
+    const ticketDoc = await getDoc(ticketRef);
+
+    if (!ticketDoc.exists()) {
+      throw new Error("Ticket not found");
+    }
+
+    const now = new Date();
+    const currentComments = ticketDoc.data().comments || [];
+
+    await updateDoc(ticketRef, {
+      comments: [
+        ...currentComments,
+        {
+          id: `comment_${Date.now()}`,
+          text: commentText,
+          createdAt: now.toISOString(),
+          createdBy: {
+            uid: currentUser.uid,
+            email: currentUser.email,
+            role: currentUser.role,
+          },
+        },
+      ],
+      updatedAt: serverTimestamp(),
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Error adding comment:", error);
     throw error;
   }
 };
